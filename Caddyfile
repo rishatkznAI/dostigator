@@ -1,0 +1,22 @@
+{
+  admin off
+  auto_https off
+}
+
+:8080 {
+  root * /srv/dist
+  encode zstd gzip
+
+  handle /health {
+    respond "ok" 200
+  }
+
+  try_files {path} /index.html
+  file_server
+
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  }
+}
