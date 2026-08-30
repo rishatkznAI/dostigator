@@ -2,7 +2,9 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { DataProvider } from './context/DataContext'
+import { OnboardingGate } from './context/OnboardingContext'
 import { AppShell } from './components/AppShell'
+import { useSyncQueue } from './hooks/useSyncQueue'
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })))
@@ -10,18 +12,27 @@ const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ defau
 const GoalsPage = lazy(() => import('./pages/GoalsPage').then((module) => ({ default: module.GoalsPage })))
 const GoalPage = lazy(() => import('./pages/GoalPage').then((module) => ({ default: module.GoalPage })))
 const HabitsPage = lazy(() => import('./pages/HabitsPage').then((module) => ({ default: module.HabitsPage })))
+const TrainingPage = lazy(() => import('./pages/TrainingPage').then((module) => ({ default: module.TrainingPage })))
+const WorkoutPage = lazy(() => import('./pages/WorkoutPage').then((module) => ({ default: module.WorkoutPage })))
+const TrainingHistoryPage = lazy(() => import('./pages/TrainingHistoryPage').then((module) => ({ default: module.TrainingHistoryPage })))
+const TrainingProgressPage = lazy(() => import('./pages/TrainingProgressPage').then((module) => ({ default: module.TrainingProgressPage })))
+const TrainingBodyPage = lazy(() => import('./pages/TrainingBodyPage').then((module) => ({ default: module.TrainingBodyPage })))
+const TrainingPlanPage = lazy(() => import('./pages/TrainingPlanPage').then((module) => ({ default: module.TrainingPlanPage })))
 const ReviewPage = lazy(() => import('./pages/ReviewPage').then((module) => ({ default: module.ReviewPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })))
+const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })))
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((module) => ({ default: module.OnboardingPage })))
 
 function LoadingScreen() {
-  return <div className="loading-screen"><span>Д</span><p>Собираем следующий шаг…</p></div>
+  return <div className="loading-screen" role="status" aria-live="polite" aria-atomic="true" aria-busy="true"><span aria-hidden="true">Д</span><p>Собираем следующий шаг…</p></div>
 }
 
 function ProtectedApp() {
   const { user, loading } = useAuth()
+  useSyncQueue(user?.id)
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" replace />
-  return <DataProvider><Outlet /></DataProvider>
+  return <DataProvider><OnboardingGate fallback={<LoadingScreen />}><Outlet /></OnboardingGate></DataProvider>
 }
 
 function PublicOnly({ children }: { children: ReactNode }) {
@@ -41,13 +52,22 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route element={<ProtectedApp />}>
               <Route element={<AppShell />}>
+                <Route path="onboarding" element={<OnboardingPage />} />
                 <Route index element={<HomePage />} />
                 <Route path="goals" element={<GoalsPage />} />
                 <Route path="goals/:goalId" element={<GoalPage />} />
                 <Route path="habits" element={<HabitsPage />} />
+                <Route path="training" element={<div className="training-module"><TrainingPage /></div>} />
+                <Route path="training/history" element={<div className="training-module"><TrainingHistoryPage /></div>} />
+                <Route path="training/progress" element={<div className="training-module"><TrainingProgressPage /></div>} />
+                <Route path="training/body" element={<div className="training-module"><TrainingBodyPage /></div>} />
+                <Route path="training/nutrition" element={<div className="training-module"><TrainingPlanPage /></div>} />
+                <Route path="workouts" element={<Navigate to="/training" replace />} />
                 <Route path="review" element={<ReviewPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="history" element={<HistoryPage />} />
               </Route>
+              <Route path="training/workout/:code" element={<div className="training-module"><WorkoutPage /></div>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

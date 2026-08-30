@@ -9,6 +9,9 @@
 - конкретные следующие действия;
 - «Фокус 3» — не больше трёх главных действий на день;
 - привычки, недельная норма и текущая серия;
+- полноценный TrainLog-модуль: программа A/B/C, библиотека упражнений, подходы, вес, повторения, RIR, разминка, замена и пропуск упражнения;
+- проверка готовности, таймер тренировки и отдыха, офлайн-черновик и безопасная синхронизация;
+- история тренировок, прогресс по упражнениям, замеры тела, питание, шаги и недельный PDF-отчёт;
 - прозрачный индекс дисциплины;
 - недельный обзор: победы, препятствия и следующий фокус;
 - offline cache и идемпотентная очередь изменений с client UUID;
@@ -46,7 +49,7 @@ Secret/service-role key не используется и не должен по�
 
 ## Supabase
 
-Приложение использует существующий project `vbxkcvygfakmosjvxjwh`, но не использует таблицы TrainLog. Все объекты имеют префикс `dostigator_`:
+Приложение использует существующий project `vbxkcvygfakmosjvxjwh`. Жизненные цели хранятся в таблицах с префиксом `dostigator_`:
 
 - `dostigator_areas`;
 - `dostigator_goals`;
@@ -55,7 +58,19 @@ Secret/service-role key не используется и не должен по�
 - `dostigator_habit_checkins`;
 - `dostigator_weekly_reviews`.
 
+Тренировочный модуль использует прежнюю изолированную схему TrainLog:
+
+- `exercise_library`, `workout_templates`, `workout_template_items`;
+- `workout_sessions`, `workout_session_exercises`, `workout_sets`;
+- `body_measurements`, `nutrition_entries`, `daily_activity`.
+
+Программа A/B/C и техника упражнений загружаются из базы, а не зашиты в интерфейс.
+
 Schema changes находятся только в `supabase/migrations/`. У каждой таблицы включён RLS и есть отдельные SELECT/INSERT/UPDATE/DELETE ownership policies. `anon` не имеет table grants, а frontend не передаёт `user_id` при записи. Composite foreign keys не позволяют привязать действие или привычку к объекту другого пользователя.
+
+### Выпуск тренировочного baseline
+
+`20260825051101_create_trainlog_core_schema.sql` — идемпотентный baseline TrainLog. Его версия совпадает с первой миграцией, уже записанной в production, поэтому чистые окружения получают схему с нуля, а существующее окружение корректно пропускает её при `supabase db push`.
 
 ## Offline
 
