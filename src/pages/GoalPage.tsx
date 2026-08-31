@@ -17,7 +17,7 @@ export function GoalPage() {
   const [dueDate, setDueDate] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
-  if (!goal) return <div className="page"><Link className="back-link" to="/goals"><ArrowLeft />К целям</Link><div className="empty-card large"><h1>Цель не найдена</h1><p>Возможно, она была удалена или ещё не синхронизировалась.</p></div></div>
+  if (!goal) return <div className="page"><Link className="back-link" to="/progress"><ArrowLeft />К прогрессу</Link><div className="empty-card large"><h1>Цель не найдена</h1><p>Возможно, она была удалена или ещё не синхронизировалась.</p></div></div>
   const actions = data.actions.filter((item) => item.goal_id === goal.id)
   const todo = actions.filter((item) => item.status === 'todo')
   const done = actions.filter((item) => item.status === 'done').sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''))
@@ -33,7 +33,7 @@ export function GoalPage() {
   }
 
   return <div className="page goal-page">
-    <Link className="back-link" to="/goals"><ArrowLeft />Все цели</Link>
+    <Link className="back-link" to="/progress"><ArrowLeft />К прогрессу</Link>
     <section className="goal-hero" style={{ '--area': area?.color ?? '#ffc857' } as React.CSSProperties}>
       <div><span className="area-pill">{area?.name ?? 'Без сферы'}</span><p className="eyebrow">{goal.kind === 'project' ? 'Проект' : 'Цель'}</p><h1>{goal.title}</h1>{goal.why && <blockquote>«{goal.why}»</blockquote>}<div className="goal-due"><CalendarDays />{formatDate(goal.target_date)}</div>{goal.description && <p className="goal-description">{goal.description}</p>}<button className="secondary-button goal-edit-button" type="button" disabled={goalBusy} onClick={() => setEditing(true)}><Pencil />Изменить цель</button></div>
       <ProgressRing value={progress.resultReached ? 100 : progress.percent ?? 0} label={progress.resultReached ? 'цель достигнута' : progress.percent === null ? 'нет шагов' : `${progress.done}/${progress.total} шагов`} />

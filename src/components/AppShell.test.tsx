@@ -143,9 +143,11 @@ describe('sync status', () => {
   it('provides a named primary navigation with readable link labels', () => {
     renderShell()
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
-    for (const label of ['Сегодня', 'Цели', 'Привычки', 'Обзор', 'Профиль']) {
+    for (const label of ['Сегодня', 'Тренировки', 'Прогресс', 'Обзор', 'Профиль']) {
       expect(within(navigation).getByRole('link', { name: label })).toBeVisible()
     }
+    expect(within(navigation).queryByRole('link', { name: 'Цели' })).not.toBeInTheDocument()
+    expect(within(navigation).queryByRole('link', { name: 'Привычки' })).not.toBeInTheDocument()
   })
 
   it('lets navigation leave an unfinished onboarding flow instead of redirecting back', async () => {

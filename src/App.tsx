@@ -9,9 +9,8 @@ import { useSyncQueue } from './hooks/useSyncQueue'
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })))
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })))
-const GoalsPage = lazy(() => import('./pages/GoalsPage').then((module) => ({ default: module.GoalsPage })))
+const ProgressPage = lazy(() => import('./pages/ProgressPage').then((module) => ({ default: module.ProgressPage })))
 const GoalPage = lazy(() => import('./pages/GoalPage').then((module) => ({ default: module.GoalPage })))
-const HabitsPage = lazy(() => import('./pages/HabitsPage').then((module) => ({ default: module.HabitsPage })))
 const TrainingPage = lazy(() => import('./pages/TrainingPage').then((module) => ({ default: module.TrainingPage })))
 const WorkoutPage = lazy(() => import('./pages/WorkoutPage').then((module) => ({ default: module.WorkoutPage })))
 const TrainingHistoryPage = lazy(() => import('./pages/TrainingHistoryPage').then((module) => ({ default: module.TrainingHistoryPage })))
@@ -54,9 +53,10 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route path="onboarding" element={<OnboardingPage />} />
                 <Route index element={<HomePage />} />
-                <Route path="goals" element={<GoalsPage />} />
+                <Route path="progress" element={<ProgressPage />} />
+                <Route path="goals" element={<Navigate to="/progress" replace />} />
                 <Route path="goals/:goalId" element={<GoalPage />} />
-                <Route path="habits" element={<HabitsPage />} />
+                <Route path="habits" element={<Navigate to="/progress?tab=habits" replace />} />
                 <Route path="training" element={<div className="training-module"><TrainingPage /></div>} />
                 <Route path="training/history" element={<div className="training-module"><TrainingHistoryPage /></div>} />
                 <Route path="training/progress" element={<div className="training-module"><TrainingProgressPage /></div>} />

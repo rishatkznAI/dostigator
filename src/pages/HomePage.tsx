@@ -76,17 +76,17 @@ export function HomePage() {
     </section>
 
     <section className="section-block">
-      <div className="section-heading"><div><p className="eyebrow">Повторение создаёт результат</p><h2>Привычки сегодня</h2></div><Link to="/habits">Все <ArrowRight /></Link></div>
+      <div className="section-heading"><div><p className="eyebrow">Повторение создаёт результат</p><h2>Привычки сегодня</h2></div><Link to="/progress?tab=habits">Все <ArrowRight /></Link></div>
       {habits.length ? <div className="habit-quick-list">{habits.slice(0, 4).map((habit) => {
         const checked = data.checkins.some((item) => item.habit_id === habit.id && item.checked_on === today && (!user || item.user_id === user.id))
         const streak = habitStreak(habit.id, data.checkins, new Date(), user?.id)
         const busy = isMutating('habit', habit.id)
         return <button key={habit.id} type="button" className={checked ? 'checked' : ''} disabled={busy} aria-busy={busy} aria-pressed={checked} aria-label={checked ? `Снять сегодняшнюю отметку привычки «${habit.title}»` : `Отметить привычку «${habit.title}» за сегодня`} onClick={() => void toggleHabitToday(habit.id).catch(() => undefined)}><span className="habit-check">{checked && <Check />}</span><span><strong>{habit.title}</strong><small><Flame />{streak} дней подряд · цель {habit.target_per_week}/нед.</small></span></button>
-      })}</div> : <Link className="empty-card link-card" to="/habits"><Flame /><h3>Добавьте первую привычку</h3><p>Например, читать 20 минут или планировать следующий день.</p></Link>}
+      })}</div> : <Link className="empty-card link-card" to="/progress?tab=habits"><Flame /><h3>Добавьте первую привычку</h3><p>Например, читать 20 минут или планировать следующий день.</p></Link>}
     </section>
 
     <section className="section-block">
-      <div className="section-heading"><div><p className="eyebrow">Большая картина</p><h2>Активные цели</h2></div><Link to="/goals">Все <ArrowRight /></Link></div>
+      <div className="section-heading"><div><p className="eyebrow">Большая картина</p><h2>Активные цели</h2></div><Link to="/progress">Все <ArrowRight /></Link></div>
       {activeGoals.length ? <div className="goal-mini-grid">{activeGoals.slice(0, 3).map((goal) => <Link key={goal.id} to={`/goals/${goal.id}`}><span style={{ background: data.areas.find((area) => area.id === goal.area_id)?.color }} /><strong>{goal.title}</strong><small>{data.actions.filter((item) => item.goal_id === goal.id && item.status === 'todo').length} следующих действий</small></Link>)}</div> : <button className="empty-card link-card" disabled={goalAdding} onClick={() => setShowGoalForm(true)}><Target /><h3>Сформулируйте первый результат</h3><p>Книга, ремонт или вопрос по машине — начнём с конечной точки.</p></button>}
     </section>
 

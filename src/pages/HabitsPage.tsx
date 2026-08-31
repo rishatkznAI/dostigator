@@ -1,6 +1,5 @@
-import { ArrowRight, Check, Dumbbell, Flame, Pause, Pencil, Play, Plus } from 'lucide-react'
+import { Check, Flame, Pause, Pencil, Play, Plus } from 'lucide-react'
 import { Fragment, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { PageHeader } from '../components/PageHeader'
 import { HabitEditForm } from '../components/EditForms'
 import { useAuth } from '../context/AuthContext'
@@ -38,7 +37,6 @@ export function HabitsPage() {
 
   return <div className="page">
     <PageHeader eyebrow="Дисциплина" title="Привычки" text="Не идеальная серия, а устойчивое возвращение к нужному действию." action={<button className="icon-button accent" aria-label="Добавить привычку" disabled={adding} aria-busy={adding} onClick={() => setShowForm((value) => !value)}><Plus /></button>} />
-    <Link className="workouts-entry-card" to="/training"><span><Dumbbell /></span><div><strong>Тренировки</strong><small>Программа A/B/C, упражнения, подходы и история</small></div><ArrowRight /></Link>
     {showForm && <form className="inline-create-card" aria-busy={adding} onSubmit={submit}><p className="eyebrow">Новая привычка</p><h2>Что хотите повторять?</h2><label>Действие<input required disabled={adding} maxLength={140} placeholder="Например, читать 20 минут" value={title} onChange={(event) => { if (!adding) setTitle(event.target.value) }} /></label><div className="form-row"><label>Раз в неделю<select disabled={adding} value={target} onChange={(event) => { if (!adding) setTarget(Number(event.target.value)) }}>{[1,2,3,4,5,6,7].map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label>Сфера<select disabled={adding} value={areaId} onChange={(event) => { if (!adding) setAreaId(event.target.value) }}><option value="">Без сферы</option>{data.areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}</select></label></div>{message && <p className="form-message" role="alert">{message}</p>}{adding && <p className="visually-hidden" role="status" aria-live="polite">Добавляем привычку, дождитесь завершения.</p>}<button className="primary-button" disabled={adding || !title.trim()} aria-busy={adding}>{adding ? 'Добавляем…' : 'Добавить привычку'}</button></form>}
 
     <div className="habit-list">{habits.map((habit) => {

@@ -59,10 +59,10 @@ describe('honest habit presentation', () => {
     expect(mocks.setHabitActive).toHaveBeenCalledWith('habit-1', false)
   })
 
-  it('links to the full training module while keeping habits available', () => {
+  it('keeps training navigation out of the habit list', () => {
     render(<MemoryRouter><HabitsPage /></MemoryRouter>)
 
-    expect(screen.getByRole('link', { name: /Тренировки/ })).toHaveAttribute('href', '/training')
+    expect(screen.queryByRole('link', { name: /Тренировки/ })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Читать' })).toBeInTheDocument()
   })
 })

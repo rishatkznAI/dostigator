@@ -1,3 +1,5 @@
+import { cloudflare } from '@cloudflare/vite-plugin'
+import { sites } from '@openai/sites-vite-plugin'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
@@ -28,6 +30,7 @@ export default defineConfig({
         runtimeCaching: [],
       },
     }),
+    ...(process.env.VITEST ? [] : [sites(), cloudflare()]),
   ],
   test: {
     environment: 'jsdom',
