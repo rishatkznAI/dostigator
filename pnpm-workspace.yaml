@@ -2,5 +2,8 @@ allowBuilds:
   '@embedded-postgres/darwin-arm64': true
   '@embedded-postgres/linux-x64': true
   embedded-postgres: true
+  esbuild: true
+  sharp: true
+  workerd: true
 minimumReleaseAgeExclude:
   - '@rolldown/binding-openharmony-arm64@1.2.6'
