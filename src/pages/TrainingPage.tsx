@@ -68,7 +68,7 @@ export function TrainingPage() {
 
       <nav className="training-shortcuts" aria-label="Разделы TrainLog">
         <Link to="/training/history"><History /><span>История</span></Link>
-        <Link to="/training/nutrition"><Utensils /><span>Питание</span></Link>
+        <Link to="/nutrition"><Utensils /><span>Питание</span></Link>
         <Link to="/training/progress"><Activity /><span>Прогресс</span></Link>
         <Link to="/training/body"><Ruler /><span>Замеры</span></Link>
       </nav>
@@ -87,7 +87,7 @@ export function TrainingPage() {
         </div>
       </section>
 
-      <Link className="goal-card" to="/training/nutrition">
+      <Link className="goal-card" to="/nutrition">
         <div className="goal-icon"><Goal /></div>
         <div>
           <span>Цель · рекомпозиция</span>

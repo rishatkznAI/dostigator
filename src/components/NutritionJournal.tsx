@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronLeft, ChevronRight, Copy, Footprints, Pencil, Plus, Trash2, Utensils, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Copy, Footprints, Pencil, Plus, Trash2, Utensils, X } from 'lucide-react'
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { deleteNutritionEntry, loadDailyActivity, loadNutritionEntries, saveDailyActivity, saveNutritionEntry } from '../lib/trainingRepository'
 import { createId } from '../lib/workout'
@@ -175,10 +175,16 @@ export function NutritionJournal() {
         <button className="primary-button wide" type="submit" disabled={savingMeal || !description.trim()}><Plus />{savingMeal ? 'Сохраняем…' : editId ? 'Сохранить изменения' : 'Добавить приём пищи'}</button>
       </form>
 
-      {(message || error) && <p className={error ? 'form-error' : 'form-message'} role={error ? 'alert' : 'status'}>{error ?? message}</p>}
+      {(message || error) && (
+        <div className={`nutrition-feedback ${error ? 'error' : 'success'}`} role={error ? 'alert' : 'status'}>
+          {error ? <CircleAlert aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
+          <span>{error ?? message}</span>
+          <button type="button" onClick={() => { setError(null); setMessage(null) }} aria-label="Закрыть уведомление"><X aria-hidden="true" /></button>
+        </div>
+      )}
 
       <section className="today-meals">
-        <div className="section-heading"><div><p className="eyebrow">{selectedDate === today ? 'Сегодня' : selectedDate}</p><h2>Записано</h2></div><strong>{entries.length}</strong></div>
+        <div className="section-heading"><div className="meals-heading-copy"><p className="eyebrow">{selectedDate === today ? 'Сегодня' : selectedDate}</p><div><h2>Записано</h2><strong className="meal-count" aria-label={`Записей: ${entries.length}`}>{entries.length}</strong></div></div></div>
         {loading ? <div className="inline-loader">Загружаем…</div> : entries.length === 0 ? <div className="nutrition-empty">Пока нет записей.</div> : (
           <div className="nutrition-entry-list">{entries.map((entry) => (
             <article key={entry.id}>

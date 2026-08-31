@@ -60,7 +60,7 @@ h1, h2, h3, strong { letter-spacing: -0.025em; }
 .secondary-button { color: var(--text); background: transparent; border-color: var(--line); }
 .primary-button:disabled, .secondary-button:disabled, .icon-button:disabled { opacity: .4; cursor: not-allowed; }
 
-.bottom-nav { position: fixed; z-index: 20; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(calc(100% - 20px), 700px); height: var(--nav-height); padding: 8px; border: 1px solid #2b2d36; border-radius: 24px; background: #111218ef; backdrop-filter: blur(20px); display: grid; grid-template-columns: repeat(5, 1fr); box-shadow: 0 18px 60px #000a; }
+.bottom-nav { position: fixed; z-index: 20; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(calc(100% - 20px), 700px); height: var(--nav-height); padding: 8px; border: 1px solid #2b2d36; border-radius: 24px; background: #111218ef; backdrop-filter: blur(20px); display: grid; grid-template-columns: repeat(6, 1fr); box-shadow: 0 18px 60px #000a; }
 .app-brand { display: none; }
 .bottom-nav a { min-width: 0; min-height: 54px; border-radius: 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--text-secondary); font-weight: 700; font-size: .75rem; }
 .bottom-nav a.active { color: var(--accent); background: #ffc8570d; }

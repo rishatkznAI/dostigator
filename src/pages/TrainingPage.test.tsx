@@ -45,6 +45,7 @@ describe('full training entry point', () => {
 
     expect(screen.getByRole('heading', { name: 'Привет, Ринат' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'История' })).toHaveAttribute('href', '/training/history')
+    expect(screen.getByRole('link', { name: 'Питание' })).toHaveAttribute('href', '/nutrition')
     expect(screen.getByRole('link', { name: 'Прогресс' })).toHaveAttribute('href', '/training/progress')
     expect(screen.getByRole('link', { name: 'Замеры' })).toHaveAttribute('href', '/training/body')
     for (const code of ['A', 'B', 'C']) {
