@@ -4,9 +4,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
 
+const isGitHubPages = process.env.GITHUB_PAGES === 'true'
+
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? '/dostigator/' : '/',
+  base: isGitHubPages ? '/dostigator/' : '/',
   plugins: [
     react(),
     VitePWA({
@@ -30,7 +32,7 @@ export default defineConfig({
         runtimeCaching: [],
       },
     }),
-    ...(process.env.VITEST ? [] : [sites(), cloudflare()]),
+    ...(process.env.VITEST || isGitHubPages ? [] : [sites(), cloudflare()]),
   ],
   test: {
     environment: 'jsdom',
