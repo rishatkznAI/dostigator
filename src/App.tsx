@@ -58,10 +58,11 @@ export default function App() {
                 <Route path="goals/:goalId" element={<GoalPage />} />
                 <Route path="habits" element={<Navigate to="/progress?tab=habits" replace />} />
                 <Route path="training" element={<div className="training-module"><TrainingPage /></div>} />
+                <Route path="nutrition" element={<div className="training-module"><TrainingPlanPage /></div>} />
                 <Route path="training/history" element={<div className="training-module"><TrainingHistoryPage /></div>} />
                 <Route path="training/progress" element={<div className="training-module"><TrainingProgressPage /></div>} />
                 <Route path="training/body" element={<div className="training-module"><TrainingBodyPage /></div>} />
-                <Route path="training/nutrition" element={<div className="training-module"><TrainingPlanPage /></div>} />
+                <Route path="training/nutrition" element={<Navigate to="/nutrition" replace />} />
                 <Route path="workouts" element={<Navigate to="/training" replace />} />
                 <Route path="review" element={<ReviewPage />} />
                 <Route path="settings" element={<SettingsPage />} />

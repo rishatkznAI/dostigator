@@ -1,4 +1,4 @@
-import { BarChart3, CircleUserRound, Dumbbell, Home, TrendingUp } from 'lucide-react'
+import { BarChart3, CircleUserRound, Dumbbell, Home, TrendingUp, Utensils } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useOnboarding } from '../context/OnboardingContext'
@@ -6,6 +6,7 @@ import { useOnboarding } from '../context/OnboardingContext'
 const navigation = [
   { to: '/', label: 'Сегодня', shortLabel: 'День', icon: Home },
   { to: '/training', label: 'Тренировки', shortLabel: 'Зал', icon: Dumbbell },
+  { to: '/nutrition', label: 'Питание', shortLabel: 'Еда', icon: Utensils },
   { to: '/progress', label: 'Прогресс', shortLabel: 'Рост', icon: TrendingUp },
   { to: '/review', label: 'Обзор', shortLabel: 'Итоги', icon: BarChart3 },
   { to: '/settings', label: 'Профиль', shortLabel: 'Я', icon: CircleUserRound },
