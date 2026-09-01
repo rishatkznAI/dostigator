@@ -12,6 +12,8 @@ const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ defau
 const ProgressPage = lazy(() => import('./pages/ProgressPage').then((module) => ({ default: module.ProgressPage })))
 const GoalPage = lazy(() => import('./pages/GoalPage').then((module) => ({ default: module.GoalPage })))
 const TrainingPage = lazy(() => import('./pages/TrainingPage').then((module) => ({ default: module.TrainingPage })))
+const CardioPage = lazy(() => import('./pages/CardioPage').then((module) => ({ default: module.CardioPage })))
+const SpaPage = lazy(() => import('./pages/SpaPage').then((module) => ({ default: module.SpaPage })))
 const WorkoutPage = lazy(() => import('./pages/WorkoutPage').then((module) => ({ default: module.WorkoutPage })))
 const TrainingHistoryPage = lazy(() => import('./pages/TrainingHistoryPage').then((module) => ({ default: module.TrainingHistoryPage })))
 const TrainingProgressPage = lazy(() => import('./pages/TrainingProgressPage').then((module) => ({ default: module.TrainingProgressPage })))
@@ -58,6 +60,8 @@ export default function App() {
                 <Route path="goals/:goalId" element={<GoalPage />} />
                 <Route path="habits" element={<Navigate to="/progress?tab=habits" replace />} />
                 <Route path="training" element={<div className="training-module"><TrainingPage /></div>} />
+                <Route path="training/cardio" element={<div className="training-module"><CardioPage /></div>} />
+                <Route path="training/spa" element={<div className="training-module"><SpaPage /></div>} />
                 <Route path="nutrition" element={<div className="training-module"><TrainingPlanPage /></div>} />
                 <Route path="training/history" element={<div className="training-module"><TrainingHistoryPage /></div>} />
                 <Route path="training/progress" element={<div className="training-module"><TrainingProgressPage /></div>} />

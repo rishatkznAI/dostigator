@@ -524,3 +524,142 @@ body.modal-open { overflow: hidden; }
 .training-module .training-shortcuts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 13px; }
 .training-module .training-shortcuts a { display: flex; min-height: 58px; align-items: center; justify-content: center; flex-direction: column; gap: 5px; border: 1px solid var(--line-soft); border-radius: 14px; color: var(--muted); background: var(--panel); font-size: 8px; font-weight: 800; }
 .training-module .training-shortcuts svg { width: 17px; color: var(--accent); }
+
+/* Cardio and post-workout recovery */
+.training-module .cardio-entry-card,
+.training-module .spa-entry-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 13px; margin-top: 10px; padding: 16px 14px; border-radius: 18px; background: var(--panel); }
+.training-module .cardio-entry-card { border: 1px solid rgba(255, 200, 87, .26); background: radial-gradient(circle at 94% -30%, rgba(255, 200, 87, .13), transparent 46%), var(--panel); }
+.training-module .spa-entry-card { border: 1px solid rgba(90, 205, 224, .25); background: radial-gradient(circle at 94% -30%, rgba(90, 205, 224, .13), transparent 46%), var(--panel); }
+.training-module .cardio-entry-icon,
+.training-module .spa-entry-icon { display: grid; width: 46px; height: 58px; place-items: center; border-radius: 13px; }
+.training-module .cardio-entry-icon { border: 1px solid rgba(255, 200, 87, .26); color: var(--amber); background: rgba(255, 200, 87, .07); }
+.training-module .spa-entry-icon { border: 1px solid rgba(90, 205, 224, .25); color: #76d7e6; background: rgba(90, 205, 224, .07); }
+.training-module .cardio-entry-icon svg,
+.training-module .spa-entry-icon svg { width: 22px; }
+.training-module .cardio-entry-card > div:nth-child(2),
+.training-module .spa-entry-card > div:nth-child(2) { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.training-module .cardio-entry-card span,
+.training-module .spa-entry-card span { font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.training-module .cardio-entry-card span { color: var(--amber); }
+.training-module .spa-entry-card span { color: #76d7e6; }
+.training-module .cardio-entry-card strong,
+.training-module .spa-entry-card strong { font-size: 15px; }
+.training-module .cardio-entry-card small,
+.training-module .spa-entry-card small { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.training-module .cardio-entry-card > svg,
+.training-module .spa-entry-card > svg { width: 19px; color: var(--muted); }
+
+.training-module .cardio-page,
+.training-module .spa-page { padding-top: calc(20px + env(safe-area-inset-top)); }
+.training-module .cardio-hero,
+.training-module .spa-hero { position: relative; overflow: hidden; padding: 25px 22px 22px; border-radius: 24px; box-shadow: var(--shadow); }
+.training-module .cardio-hero { border: 1px solid rgba(255, 200, 87, .28); background: radial-gradient(circle at 92% 8%, rgba(255, 200, 87, .18), transparent 36%), linear-gradient(145deg, #1b1b13, #12140f); }
+.training-module .spa-page { --spa: #76d7e6; }
+.training-module .spa-page .eyebrow { color: var(--spa); }
+.training-module .spa-hero { border: 1px solid rgba(90, 205, 224, .28); background: radial-gradient(circle at 92% 8%, rgba(90, 205, 224, .18), transparent 36%), linear-gradient(145deg, #121d1d, #111511); }
+.training-module .cardio-hero::after,
+.training-module .spa-hero::after { position: absolute; right: -48px; bottom: -80px; width: 180px; height: 180px; border-radius: 50%; content: ''; }
+.training-module .cardio-hero::after { border: 1px solid rgba(255, 200, 87, .1); }
+.training-module .spa-hero::after { border: 1px solid rgba(90, 205, 224, .1); }
+.training-module .cardio-hero-icon,
+.training-module .spa-hero-icon { display: grid; width: 48px; height: 48px; place-items: center; margin-bottom: 18px; border-radius: 15px; }
+.training-module .cardio-hero-icon { color: #181508; background: var(--amber); }
+.training-module .spa-hero-icon { color: #0c1718; background: var(--spa); }
+.training-module .cardio-hero-icon svg,
+.training-module .spa-hero-icon svg { width: 24px; }
+.training-module .cardio-hero .eyebrow { color: var(--amber); }
+.training-module .cardio-hero h1,
+.training-module .spa-hero h1 { max-width: 500px; margin: 0 0 10px; font-size: clamp(29px, 8vw, 42px); line-height: 1.02; letter-spacing: -.055em; }
+.training-module .cardio-hero > p:not(.eyebrow),
+.training-module .spa-hero > p:not(.eyebrow) { max-width: 520px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.training-module .cardio-targets,
+.training-module .spa-targets { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 21px; }
+.training-module .cardio-targets span,
+.training-module .spa-targets span { display: flex; min-height: 66px; justify-content: center; flex-direction: column; gap: 3px; padding: 11px; border: 1px solid rgba(255,255,255,.06); border-radius: 14px; color: var(--muted); background: rgba(0,0,0,.18); font-size: 8px; }
+.training-module .cardio-targets strong,
+.training-module .spa-targets strong { color: #fff; font-size: 16px; }
+
+.training-module .cardio-week-list,
+.training-module .cardio-exercise-list,
+.training-module .spa-timeline,
+.training-module .spa-zone-list { display: grid; gap: 8px; }
+.training-module .cardio-week-list article { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 11px; min-height: 64px; padding: 9px 12px 9px 9px; border: 1px solid var(--line-soft); border-radius: 16px; background: var(--panel); }
+.training-module .cardio-week-list article > span { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 12px; color: var(--amber); background: rgba(255, 200, 87, .07); font-size: 10px; font-weight: 850; }
+.training-module .cardio-week-list article > div { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.training-module .cardio-week-list strong { font-size: 11px; }
+.training-module .cardio-week-list small { color: var(--muted); font-size: 9px; line-height: 1.45; }
+.training-module .cardio-note,
+.training-module .spa-note { display: flex; gap: 8px; margin: 12px 2px 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
+.training-module .cardio-note svg,
+.training-module .spa-note svg { width: 15px; flex: 0 0 auto; }
+.training-module .cardio-note svg { color: var(--amber); }
+.training-module .spa-note svg { color: var(--spa); }
+
+.training-module .cardio-exercise-card,
+.training-module .spa-zone-card { padding: 16px; border: 1px solid var(--line-soft); border-radius: 20px; background: var(--panel); }
+.training-module .cardio-exercise-head,
+.training-module .spa-zone-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; }
+.training-module .cardio-exercise-icon,
+.training-module .spa-zone-icon { display: grid; width: 43px; height: 43px; place-items: center; border-radius: 13px; }
+.training-module .cardio-exercise-icon { color: var(--amber); background: rgba(255, 200, 87, .07); }
+.training-module .spa-zone-icon { color: var(--spa); background: rgba(90, 205, 224, .07); }
+.training-module .cardio-exercise-icon svg,
+.training-module .spa-zone-icon svg { width: 20px; }
+.training-module .cardio-exercise-head h3,
+.training-module .spa-zone-head h3 { margin: 0 0 3px; font-size: 14px; }
+.training-module .cardio-exercise-head p,
+.training-module .spa-zone-head p { margin: 0; color: var(--muted); font-size: 8px; line-height: 1.35; }
+.training-module .cardio-exercise-head > span,
+.training-module .spa-zone-head > span { padding: 6px 8px; border-radius: 9px; font-size: 8px; font-weight: 800; white-space: nowrap; }
+.training-module .cardio-exercise-head > span { color: var(--amber); background: rgba(255, 200, 87, .07); }
+.training-module .spa-zone-head > span { color: var(--spa); background: rgba(90, 205, 224, .07); }
+.training-module .cardio-exercise-card ol,
+.training-module .spa-zone-card ol { display: grid; gap: 7px; margin: 15px 0 12px; padding: 14px 14px 14px 34px; border: 1px solid var(--line-soft); border-radius: 14px; color: #c8cec2; background: #0e110c; font-size: 9px; line-height: 1.45; }
+.training-module .cardio-exercise-card li::marker { color: var(--amber); font-weight: 800; }
+.training-module .spa-zone-card li::marker { color: var(--spa); font-weight: 800; }
+.training-module .cardio-cue { display: flex; gap: 7px; margin: 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.training-module .cardio-cue svg { width: 15px; flex: 0 0 auto; color: var(--amber); }
+.training-module .spa-zone-note { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.training-module .cardio-intensity-card { margin-top: 30px; padding: 20px; border: 1px solid rgba(255, 200, 87, .22); border-radius: 21px; background: linear-gradient(145deg, rgba(255, 200, 87, .07), rgba(255, 200, 87, .015)); }
+.training-module .cardio-intensity-card h2 { margin: 0 0 8px; font-size: 20px; }
+.training-module .cardio-intensity-card > p:last-of-type { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.training-module .cardio-intensity-card > div { display: flex; gap: 8px; margin-top: 15px; padding-top: 14px; border-top: 1px solid rgba(255, 200, 87, .13); color: #c2c9bc; font-size: 9px; line-height: 1.55; }
+.training-module .cardio-intensity-card > div svg { width: 16px; flex: 0 0 auto; color: var(--amber); }
+
+.training-module .spa-timeline article { display: grid; grid-template-columns: 46px 38px minmax(0, 1fr); align-items: center; gap: 9px; min-height: 76px; padding: 10px; border: 1px solid var(--line-soft); border-radius: 17px; background: var(--panel); }
+.training-module .spa-time { display: flex; width: 46px; height: 52px; align-items: center; justify-content: center; flex-direction: column; gap: 2px; border-radius: 12px; color: #0c1718; background: var(--spa); }
+.training-module .spa-time span { font-size: 12px; font-weight: 900; }
+.training-module .spa-time small { font-size: 6px; font-weight: 800; }
+.training-module .spa-timeline-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; color: var(--spa); background: rgba(90, 205, 224, .07); }
+.training-module .spa-timeline-icon svg { width: 17px; }
+.training-module .spa-timeline article > div:last-child { min-width: 0; }
+.training-module .spa-timeline strong { font-size: 11px; }
+.training-module .spa-timeline p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.training-module .cold-card,
+.training-module .spa-hydration-card { display: grid; grid-template-columns: auto 1fr; gap: 13px; margin-top: 30px; padding: 19px; border: 1px solid rgba(90, 205, 224, .22); border-radius: 21px; background: linear-gradient(145deg, rgba(90, 205, 224, .07), rgba(90, 205, 224, .015)); }
+.training-module .cold-card-icon,
+.training-module .spa-hydration-icon { display: grid; width: 43px; height: 43px; place-items: center; border-radius: 13px; color: #0c1718; background: var(--spa); }
+.training-module .cold-card-icon svg,
+.training-module .spa-hydration-icon svg { width: 20px; }
+.training-module .cold-card h2,
+.training-module .spa-hydration-card h2 { margin: 0 0 7px; font-size: 18px; line-height: 1.15; }
+.training-module .cold-card p:last-child,
+.training-module .spa-hydration-card p:last-child { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.training-module .spa-stop-card { margin-top: 30px; padding: 20px; border: 1px solid rgba(255, 113, 104, .25); border-radius: 21px; background: rgba(255, 113, 104, .035); }
+.training-module .spa-stop-card .eyebrow { color: var(--danger); }
+.training-module .spa-stop-card h2 { margin: 0 0 12px; font-size: 20px; }
+.training-module .spa-stop-card ul { display: grid; gap: 8px; margin: 0; padding-left: 18px; color: #c8cec2; font-size: 9px; line-height: 1.45; }
+.training-module .spa-stop-card li::marker { color: var(--danger); }
+.training-module .spa-stop-card > div { display: flex; gap: 8px; margin-top: 15px; padding-top: 14px; border-top: 1px solid rgba(255, 113, 104, .14); color: var(--muted); font-size: 9px; line-height: 1.55; }
+.training-module .spa-stop-card > div svg { width: 16px; flex: 0 0 auto; color: var(--danger); }
+
+@media (max-width: 420px) {
+  .training-module .cardio-targets,
+  .training-module .spa-targets { gap: 6px; }
+  .training-module .cardio-targets span,
+  .training-module .spa-targets span { padding: 9px 8px; }
+  .training-module .cardio-exercise-head,
+  .training-module .spa-zone-head { grid-template-columns: auto minmax(0, 1fr); }
+  .training-module .cardio-exercise-head > span,
+  .training-module .spa-zone-head > span { grid-column: 2; justify-self: start; }
+}

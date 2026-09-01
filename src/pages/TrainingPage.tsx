@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, CloudOff, Goal, History, LogOut, Play, RotateCcw, Ruler, Scale, Settings, TimerReset, Utensils } from 'lucide-react'
+import { Activity, ArrowRight, CloudOff, Goal, HeartPulse, History, LogOut, Play, RotateCcw, Ruler, Scale, Settings, Sparkles, TimerReset, Utensils } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -143,6 +143,26 @@ export function TrainingPage() {
             </article>
           )})}
         </div>
+
+        <Link className="cardio-entry-card" to="/training/cardio">
+          <div className="cardio-entry-icon"><HeartPulse /></div>
+          <div>
+            <span>Кардио</span>
+            <strong>Когда, сколько и как делать</strong>
+            <small>Недельный план, правильный темп и четыре варианта нагрузки</small>
+          </div>
+          <ArrowRight />
+        </Link>
+
+        <Link className="spa-entry-card" to="/training/spa">
+          <div className="spa-entry-icon"><Sparkles /></div>
+          <div>
+            <span>После тренировки</span>
+            <strong>Спа и восстановление</strong>
+            <small>Сауна, хаммам, джакузи, бассейн и безопасный порядок действий</small>
+          </div>
+          <ArrowRight />
+        </Link>
       </section>
 
       <section className="section-block">
