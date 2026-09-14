@@ -212,7 +212,7 @@ export function SettingsPage() {
     <section className="settings-card"><div className="settings-title"><KeyRound /><div><p className="eyebrow">Безопасность</p><h2>Изменить пароль</h2></div></div><form className="stack-form" onSubmit={changePassword} aria-busy={operation === 'password'}><label>Новый пароль<input disabled={busy} type="password" minLength={12} value={password} onChange={(event) => setPassword(event.target.value)} /></label><label>Повторите пароль<input disabled={busy} type="password" minLength={12} value={confirm} onChange={(event) => setConfirm(event.target.value)} /></label><button className="primary-button" disabled={busy || !password} aria-busy={operation === 'password'}>{operation === 'password' ? 'Изменяем…' : 'Изменить пароль'}</button></form></section>
     <section className="settings-card">
       <div className="settings-title"><ShieldCheck /><div><p className="eyebrow">Ваши данные</p><h2>Резервная копия</h2></div></div>
-      <p>JSON содержит цели, действия, привычки, обзоры и переносимый архив истории. Перед импортом приложение покажет состав файла; сервер применит все записи одной транзакцией или полностью откатит восстановление.</p>
+      <p>JSON содержит цели, действия, привычки, обзоры, дневник и переносимый архив истории. Перед импортом приложение покажет состав файла; сервер применит все записи одной транзакцией или полностью откатит восстановление.</p>
       <div className="button-row">
         <button className="secondary-button" disabled={busy} aria-busy={operation === 'backup-download'} onClick={() => void downloadBackup()}><Download />{operation === 'backup-download' ? 'Готовим…' : 'Скачать JSON'}</button>
         <button className="secondary-button" disabled={restoreDisabled} aria-busy={operation === 'backup-preview'} onClick={() => fileInput.current?.click()}><Upload />{operation === 'backup-preview' ? 'Проверяем…' : 'Выбрать копию'}</button>
@@ -233,6 +233,7 @@ export function SettingsPage() {
           <li>Цели: {restoreCandidate.preview.counts.goals}</li>
           <li>Действия: {restoreCandidate.preview.counts.actions}</li>
           <li>Привычки и отметки: {restoreCandidate.preview.counts.habits + restoreCandidate.preview.counts.checkins}</li>
+          <li>Дневник: {restoreCandidate.preview.counts.journals}</li>
           <li>История трёх главных действий: {restoreCandidate.preview.counts.focusCommitments}</li>
           <li>Обзоры: {restoreCandidate.preview.counts.reviews}</li>
         </ul>

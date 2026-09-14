@@ -20,6 +20,7 @@ const TrainingProgressPage = lazy(() => import('./pages/TrainingProgressPage').t
 const TrainingBodyPage = lazy(() => import('./pages/TrainingBodyPage').then((module) => ({ default: module.TrainingBodyPage })))
 const TrainingPlanPage = lazy(() => import('./pages/TrainingPlanPage').then((module) => ({ default: module.TrainingPlanPage })))
 const ReviewPage = lazy(() => import('./pages/ReviewPage').then((module) => ({ default: module.ReviewPage })))
+const JournalPage = lazy(() => import('./pages/JournalPage').then((module) => ({ default: module.JournalPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })))
 const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((module) => ({ default: module.OnboardingPage })))
@@ -69,6 +70,7 @@ export default function App() {
                 <Route path="training/nutrition" element={<Navigate to="/nutrition" replace />} />
                 <Route path="workouts" element={<Navigate to="/training" replace />} />
                 <Route path="review" element={<ReviewPage />} />
+                <Route path="journal" element={<JournalPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="history" element={<HistoryPage />} />
               </Route>

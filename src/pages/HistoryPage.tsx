@@ -10,6 +10,9 @@ import type { AppData, HistoryEvent, PendingOperation } from '../types'
 
 const fieldNames: Record<string, string> = {
   title: 'Название',
+  date: 'Дата записи',
+  entry_type: 'Тип записи',
+  content: 'Содержание',
   description: 'Описание',
   why: 'Причина',
   kind: 'Тип',
@@ -38,6 +41,7 @@ const fieldNames: Record<string, string> = {
 
 const hiddenFields = new Set(['id', 'user_id', 'revision', 'last_mutation_id', 'created_at', 'updated_at'])
 const enumNames: Record<string, string> = {
+  idea: 'Идея', plan: 'План', 'day-note': 'Как прошёл день',
   goal: 'Цель', project: 'Проект', active: 'Активно', paused: 'На паузе', completed: 'Завершено',
   archived: 'В архиве', todo: 'В работе', done: 'Выполнено', cancelled: 'Отменено',
 }
@@ -94,6 +98,7 @@ function entityRevision(event: HistoryEvent, data: AppData) {
     : event.entity_type === 'action' ? data.actions
     : event.entity_type === 'habit' ? data.habits
     : event.entity_type === 'habit_checkin' ? data.checkins
+    : event.entity_type === 'journal' ? data.journals ?? []
     : data.reviews
   return rows.find((row) => row.id === event.entity_id)?.revision ?? null
 }
@@ -110,7 +115,7 @@ function pendingAsEvent(item: PendingOperation, ownerId: string): HistoryEvent |
       operation: item.mutation.operation,
       label: item.label,
       before_data: item.mutation.before,
-      after_data: item.payload ?? null,
+      after_data: item.mutation.operation === 'journal_delete' ? null : item.payload ?? null,
       base_revision: item.mutation.baseRevision,
       result_revision: item.mutation.baseRevision + 1,
       source: 'offline',

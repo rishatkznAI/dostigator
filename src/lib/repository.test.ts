@@ -112,7 +112,7 @@ describe('personal backup', () => {
     })
 
     expect(preview).toEqual({
-      counts: { areas: 0, goals: 1, actions: 1, habits: 1, checkins: 1, reviews: 1, focusCommitments: 1 },
+      counts: { areas: 0, goals: 1, actions: 1, habits: 1, checkins: 1, reviews: 1, focusCommitments: 1, journals: 0 },
       total: 6,
       idMatches: 2,
       areaNameMatches: 0,

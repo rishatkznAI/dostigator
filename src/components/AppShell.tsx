@@ -1,4 +1,4 @@
-import { BarChart3, CircleUserRound, Dumbbell, Home, TrendingUp, Utensils } from 'lucide-react'
+import { BarChart3, CircleUserRound, Dumbbell, Home, NotebookPen, TrendingUp, Utensils } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useOnboarding } from '../context/OnboardingContext'
@@ -9,6 +9,7 @@ const navigation = [
   { to: '/nutrition', label: 'Питание', shortLabel: 'Еда', icon: Utensils },
   { to: '/progress', label: 'Прогресс', shortLabel: 'Рост', icon: TrendingUp },
   { to: '/review', label: 'Обзор', shortLabel: 'Итоги', icon: BarChart3 },
+  { to: '/journal', label: 'Дневник', shortLabel: 'День', icon: NotebookPen },
   { to: '/settings', label: 'Профиль', shortLabel: 'Я', icon: CircleUserRound },
 ]
 

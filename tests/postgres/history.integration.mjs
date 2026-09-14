@@ -3,6 +3,7 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
+import { journalCases } from './journal.cases.mjs'
 
 const ownerA = '10000000-0000-4000-8000-000000000001'
 const ownerB = '20000000-0000-4000-8000-000000000002'
@@ -127,6 +128,7 @@ try {
   const migrationDir = join(process.cwd(), 'supabase', 'migrations')
   const files = (await readdir(migrationDir)).filter((file) => file.endsWith('.sql')).sort()
   for (const file of files) await admin.query(await readFile(join(migrationDir, file), 'utf8'))
+  await journalCases(admin, asUser, ownerA, ownerB)
   // The retroactive base migration must also be safe on an already-evolved database.
   await admin.query(await readFile(join(migrationDir, '20260825051101_create_trainlog_core_schema.sql'), 'utf8'))
   const trainlogTables = [

@@ -24,6 +24,7 @@ const tableEntities: Partial<Record<TableName, HistoryEntityType>> = {
   dostigator_habits: 'habit',
   dostigator_habit_checkins: 'habit_checkin',
   dostigator_weekly_reviews: 'review',
+  dostigator_journals: 'journal',
 }
 
 const entityOperations: Record<HistoryEntityType, ReadonlySet<Exclude<HistoryOperation, 'undo'>>> = {
@@ -31,6 +32,7 @@ const entityOperations: Record<HistoryEntityType, ReadonlySet<Exclude<HistoryOpe
   action: new Set(['action_create', 'action_edit', 'action_complete', 'action_reopen', 'action_delete', 'focus_add', 'focus_remove', 'legacy_upsert']),
   habit: new Set(['habit_create', 'habit_edit', 'habit_pause', 'habit_resume', 'legacy_upsert']),
   habit_checkin: new Set(['habit_check', 'habit_uncheck', 'legacy_upsert', 'legacy_delete']),
+  journal: new Set(['journal_create', 'journal_edit', 'journal_delete', 'legacy_upsert']),
   review: new Set(['review_create', 'review_edit', 'legacy_upsert']),
 }
 
@@ -257,6 +259,13 @@ function isReviewSnapshot(value: Record<string, unknown>, ownerId: string, entit
     && (value.metrics_snapshot === null || isWeeklyMetrics(value.metrics_snapshot, value.week_start))
 }
 
+function isJournalSnapshot(value: Record<string, unknown>, ownerId: string, entityId: string) {
+  return value.id === entityId && hasValidOptionalMetadata(value, ownerId)
+    && isDateString(value.date) && isStringWithin(value.title, 1, 180)
+    && typeof value.content === 'string' && value.content.length <= 5000
+    && (value.entry_type === 'idea' || value.entry_type === 'plan' || value.entry_type === 'day-note')
+}
+
 function isEntitySnapshot(
   entityType: HistoryEntityType,
   value: unknown,
@@ -269,6 +278,7 @@ function isEntitySnapshot(
     case 'action': return isActionSnapshot(value, ownerId, entityId)
     case 'habit': return isHabitSnapshot(value, ownerId, entityId)
     case 'habit_checkin': return isCheckinSnapshot(value, ownerId, entityId)
+    case 'journal': return isJournalSnapshot(value, ownerId, entityId)
     case 'review': return isReviewSnapshot(value, ownerId, entityId)
   }
 }
@@ -285,7 +295,7 @@ function isFullEntityRow(
 
 function isCreateOperation(operation: Exclude<HistoryOperation, 'undo'>) {
   return operation === 'goal_create' || operation === 'action_create' || operation === 'habit_create'
-    || operation === 'habit_check' || operation === 'review_create'
+    || operation === 'habit_check' || operation === 'review_create' || operation === 'journal_create'
 }
 
 function isMutationDescriptor(value: unknown, ownerId: string): value is MutationDescriptor {
@@ -369,12 +379,18 @@ function isPayloadForMutation(
     return mutation.entityType === 'habit_checkin' && before !== null && payload.revision === mutation.baseRevision
       && sameJson(payload.habit_id, before.habit_id) && sameJson(payload.checked_on, before.checked_on)
   }
+  if (mutation.operation === 'journal_delete') {
+    return before !== null && payload.revision === mutation.baseRevision
+      && fieldsMatch(payload, before, ['id', 'date', 'entry_type', 'title', 'content'])
+  }
   if (mutation.operation === 'habit_uncheck') {
     return before !== null && payload.revision === mutation.baseRevision
       && ['habit_id', 'checked_on', 'note'].every((key) => sameJson(payload[key], before[key]))
   }
   if (!hasNextRevision(payload, mutation)) return false
   switch (mutation.operation) {
+    case 'journal_create': return true
+    case 'journal_edit': return before !== null
     case 'goal_create':
       return payload.status === 'active' && payload.completed_at === null
     case 'goal_edit':

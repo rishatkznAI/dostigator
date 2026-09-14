@@ -1,9 +1,9 @@
 import { supabase } from './supabase'
 import { localDateFromTimestamp, shiftDate } from './date'
-import { queueStats } from './offline'
-import type { AppData, Area, HistoryEvent, PersonalBackup, RevisionedRow } from '../types'
+import { persistOrQueue, queueStats } from './offline'
+import type { AppData, Area, HistoryEvent, JournalEntry, PersonalBackup, RevisionedRow } from '../types'
 
-const emptyData = (): AppData => ({ areas: [], goals: [], actions: [], habits: [], checkins: [], reviews: [], focusCommitments: [] })
+const emptyData = (): AppData => ({ areas: [], goals: [], actions: [], habits: [], checkins: [], reviews: [], journals: [], focusCommitments: [] })
 const ownerChangedMessage = 'Аккаунт изменился во время операции. Повторите действие в активном аккаунте.'
 
 export type RepositoryOperationGuard = () => void | Promise<void>
@@ -24,7 +24,7 @@ async function assertOperationAllowed(expectedOwnerId: string, guard: Repository
 }
 
 function assertDataOwner(data: AppData, expectedOwnerId: string) {
-  const rows = [data.areas, data.goals, data.actions, data.habits, data.checkins, data.reviews, data.focusCommitments ?? []].flat()
+  const rows = [data.areas, data.goals, data.actions, data.habits, data.checkins, data.reviews, data.focusCommitments ?? [], data.journals ?? []].flat()
   if (rows.some((row) => row.user_id !== expectedOwnerId)) throw new Error(ownerChangedMessage)
 }
 
@@ -58,11 +58,12 @@ function normalizeData(data: Partial<AppData>): AppData {
       },
     })),
     focusCommitments: Array.isArray(data.focusCommitments) ? data.focusCommitments : [],
+    journals: (data.journals ?? []).map(revisioned),
   }
 }
 
 function assertImportRows(data: AppData) {
-  const rows = [data.areas, data.goals, data.actions, data.habits, data.checkins, data.reviews, data.focusCommitments ?? []].flat()
+  const rows = [data.areas, data.goals, data.actions, data.habits, data.checkins, data.reviews, data.focusCommitments ?? [], data.journals ?? []].flat()
   const invalid = rows.some((row) => !row || typeof row.id !== 'string' || !row.id.trim())
   if (invalid) throw new Error('Резервная копия содержит некорректную запись и не была восстановлена.')
 }
@@ -114,7 +115,7 @@ export async function ensureAreas(expectedOwnerId?: string) {
 export async function loadAppData(expectedOwnerId?: string): Promise<AppData> {
   if (expectedOwnerId) await assertActiveOwner(expectedOwnerId)
   await ensureAreas(expectedOwnerId)
-  const [areas, goals, actions, habits, checkins, reviews, focusCommitments] = await Promise.all([
+  const [areas, goals, actions, habits, checkins, reviews, focusCommitments, journals] = await Promise.all([
     supabase.from('dostigator_areas').select('*').order('position'),
     supabase.from('dostigator_goals').select('*').order('updated_at', { ascending: false }),
     supabase.from('dostigator_actions').select('*').order('created_at'),
@@ -122,6 +123,7 @@ export async function loadAppData(expectedOwnerId?: string): Promise<AppData> {
     supabase.from('dostigator_habit_checkins').select('*').order('checked_on', { ascending: false }),
     supabase.from('dostigator_weekly_reviews').select('*').order('week_start', { ascending: false }),
     supabase.from('dostigator_focus_commitments').select('*').order('committed_on'),
+    supabase.from('dostigator_journals').select('*').order('date', { ascending: false }),
   ])
   const loaded = normalizeData({
     areas: unwrap(areas) ?? [],
@@ -131,10 +133,32 @@ export async function loadAppData(expectedOwnerId?: string): Promise<AppData> {
     checkins: unwrap(checkins) ?? [],
     reviews: unwrap(reviews) ?? [],
     focusCommitments: unwrap(focusCommitments) ?? [],
+    journals: unwrap(journals) ?? [],
   })
   if (expectedOwnerId) {
     await assertActiveOwner(expectedOwnerId)
     assertDataOwner(loaded, expectedOwnerId)
+    // Earlier journal builds stored entries only in the owner-scoped cache.
+    // Consult server history before adopting a missing row so an old device
+    // cannot resurrect a journal entry deleted on another device.
+    const remoteIds = new Set(loaded.journals?.map((row) => row.id))
+    const localOnly = (readCachedData(expectedOwnerId).journals ?? [])
+      .filter((row) => row.user_id === expectedOwnerId && !remoteIds.has(row.id))
+    for (const entry of localOnly) {
+      await assertActiveOwner(expectedOwnerId)
+      const events = unwrap(await supabase.from('dostigator_history_events').select('id')
+        .eq('entity_type', 'journal').eq('entity_id', entry.id).limit(1)) ?? []
+      if (events.length) continue
+      const mutationId = entry.last_mutation_id ?? entry.id
+      const adopted: JournalEntry = { ...entry, revision: 1, last_mutation_id: mutationId }
+      const result = await persistOrQueue(expectedOwnerId, 'dostigator_journals', { ...adopted }, {
+        mutationId, entityType: 'journal', entityId: entry.id, operation: 'journal_create',
+        label: 'Запись перенесена из локального дневника', baseRevision: 0, before: null, source: 'legacy',
+      })
+      if (result.status === 'failed') throw new Error('Не удалось перенести локальную запись. Она сохранена на этом устройстве.')
+      loaded.journals!.push(adopted)
+    }
+    await assertActiveOwner(expectedOwnerId)
   }
   return loaded
 }
@@ -203,8 +227,9 @@ export function isBackup(value: unknown): value is PersonalBackup {
   const supportedVersion = item.version === 1 || item.version === 2 || item.version === 3
   const validHistory = item.version !== 3 || Array.isArray(item.history)
   const validFocusCommitments = item.data?.focusCommitments === undefined || Array.isArray(item.data.focusCommitments)
+  const validJournals = item.data?.journals === undefined || Array.isArray(item.data.journals)
   return item.product === 'dostigator' && supportedVersion && !!item.data
-    && Array.isArray(item.data.goals) && validHistory && validFocusCommitments
+    && Array.isArray(item.data.goals) && validHistory && validFocusCommitments && validJournals
 }
 
 export function stripOwnership<T extends { user_id: string }>(row: T): Omit<T, 'user_id'> {
@@ -217,7 +242,7 @@ function withExpectedOwner<T extends { user_id: string }>(row: T, expectedOwnerI
 }
 
 export interface BackupPreview {
-  counts: { areas: number; goals: number; actions: number; habits: number; checkins: number; reviews: number; focusCommitments: number }
+  counts: { areas: number; goals: number; actions: number; habits: number; checkins: number; reviews: number; focusCommitments: number; journals: number }
   total: number
   idMatches: number
   areaNameMatches: number
@@ -237,12 +262,14 @@ export function previewBackup(backup: PersonalBackup, current: AppData): BackupP
     checkins: normalized.checkins.length,
     reviews: normalized.reviews.length,
     focusCommitments: normalized.focusCommitments?.length ?? 0,
+    journals: normalized.journals?.length ?? 0,
   }
   const groups = [
     [normalized.areas, current.areas], [normalized.goals, current.goals],
     [normalized.actions, current.actions], [normalized.habits, current.habits],
     [normalized.checkins, current.checkins], [normalized.reviews, current.reviews],
     [normalized.focusCommitments ?? [], current.focusCommitments ?? []],
+    [normalized.journals ?? [], current.journals ?? []],
   ] as const
   const idMatches = groups.reduce((sum, [incoming, existing]) => {
     const ids = new Set(existing.map((row) => row.id))
@@ -300,6 +327,7 @@ export async function importBackup(
     checkins: normalized.checkins.map((row) => withExpectedOwner(row, expectedOwnerId)),
     reviews: normalized.reviews.map((row) => withExpectedOwner(row, expectedOwnerId)),
     focusCommitments: (normalized.focusCommitments ?? []).map((row) => withExpectedOwner(row, expectedOwnerId)),
+    journals: (normalized.journals ?? []).map((row) => withExpectedOwner(row, expectedOwnerId)),
   }
   const { error } = await supabase.rpc('dostigator_import_backup', {
     p_expected_owner: expectedOwnerId,

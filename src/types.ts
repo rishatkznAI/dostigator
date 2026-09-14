@@ -61,6 +61,19 @@ export interface FocusCommitment {
   created_at: string
 }
 
+export type JournalEntryType = 'idea' | 'plan' | 'day-note'
+
+export interface JournalEntry extends RevisionedRow {
+  id: string
+  user_id: string
+  date: string
+  entry_type: JournalEntryType
+  title: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Habit extends RevisionedRow {
   id: string
   user_id: string
@@ -120,6 +133,7 @@ export interface AppData {
   habits: Habit[]
   checkins: HabitCheckin[]
   reviews: WeeklyReview[]
+  journals?: JournalEntry[]
   /** Optional for caches/backups created before the durable Focus ledger existed. */
   focusCommitments?: FocusCommitment[]
 }
@@ -151,14 +165,16 @@ export type TableName =
   | 'dostigator_habits'
   | 'dostigator_habit_checkins'
   | 'dostigator_weekly_reviews'
+  | 'dostigator_journals'
 
-export type HistoryEntityType = 'goal' | 'action' | 'habit' | 'habit_checkin' | 'review'
+export type HistoryEntityType = 'goal' | 'action' | 'habit' | 'habit_checkin' | 'review' | 'journal'
 export type HistoryOperation =
   | 'goal_create' | 'goal_edit' | 'goal_pause' | 'goal_resume' | 'goal_complete'
   | 'action_create' | 'action_edit' | 'action_complete' | 'action_reopen' | 'action_delete'
   | 'focus_add' | 'focus_remove'
   | 'habit_create' | 'habit_edit' | 'habit_pause' | 'habit_resume'
   | 'habit_check' | 'habit_uncheck'
+  | 'journal_create' | 'journal_edit' | 'journal_delete'
   | 'review_create' | 'review_edit' | 'undo' | 'legacy_upsert' | 'legacy_delete'
 
 export type MutationSource = 'ui' | 'offline' | 'undo' | 'import' | 'legacy'
@@ -213,6 +229,7 @@ type RowByTable = {
   dostigator_actions: ActionItem
   dostigator_habits: Habit
   dostigator_habit_checkins: HabitCheckin
+  dostigator_journals: JournalEntry
   dostigator_weekly_reviews: WeeklyReview
   dostigator_focus_commitments: FocusCommitment
   dostigator_history_events: HistoryEvent
@@ -272,7 +289,7 @@ export type Database = {
         }
         Returns: {
           idempotent: boolean
-          counts: { areas: number; goals: number; actions: number; habits: number; checkins: number; reviews: number; focusCommitments: number }
+          counts: { areas: number; goals: number; actions: number; habits: number; checkins: number; reviews: number; focusCommitments: number; journals: number }
         }
       }
     }

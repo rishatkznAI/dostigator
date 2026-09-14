@@ -5,7 +5,7 @@ import { FOCUS_LIMIT, dailyFocus } from '../lib/focus'
 import { confirmedUndoQueueBlockReason } from '../lib/historyUndo'
 import { cacheData, loadAppData, readCachedData, stripOwnership } from '../lib/repository'
 import { discardRejectedMutation, flushQueue, persistOrQueue, persistUndoOrQueue, quarantineFailedQueue, queuedUndoBlockReason, queueStats, readQueue, retryFailed, type PersistenceResult } from '../lib/offline'
-import type { ActionItem, AppData, FocusCommitment, Goal, GoalKind, Habit, HabitCheckin, HistoryEntityType, HistoryEvent, HistoryOperation, MutationDescriptor, PendingOperation, WeeklyMetrics, WeeklyReview } from '../types'
+import type { ActionItem, AppData, FocusCommitment, Goal, GoalKind, Habit, HabitCheckin, HistoryEntityType, HistoryEvent, HistoryOperation, JournalEntry, JournalEntryType, MutationDescriptor, PendingOperation, WeeklyMetrics, WeeklyReview } from '../types'
 
 interface NewGoal {
   title: string
@@ -14,6 +14,13 @@ interface NewGoal {
   targetDate: string | null
   why: string
   description?: string
+}
+
+interface NewJournalEntry {
+  date: string
+  entryType: JournalEntryType
+  title: string
+  content: string
 }
 
 interface DataValue {
@@ -47,10 +54,13 @@ interface DataValue {
   updateHabit(id: string, updates: Partial<Pick<Habit, 'title' | 'target_per_week' | 'area_id'>>): Promise<void>
   toggleHabitToday(habitId: string, note?: string): Promise<void>
   setHabitActive(id: string, active: boolean): Promise<void>
-  saveReview(weekStart: string, input: Pick<WeeklyReview, 'wins' | 'blockers' | 'next_focus' | 'self_score'>, metrics: WeeklyMetrics): Promise<void>
+  saveReview(week: string, input: Pick<WeeklyReview, 'wins' | 'blockers' | 'next_focus' | 'self_score'>, metrics: WeeklyMetrics): Promise<void>
+  addJournalEntry?(input: NewJournalEntry): Promise<JournalEntry>
+  updateJournalEntry?(id: string, updates: Partial<Pick<JournalEntry, 'date' | 'entry_type' | 'title' | 'content'>>): Promise<void>
+  deleteJournalEntry?(id: string): Promise<void>
 }
 
-export type MutationScope = 'goal-add' | 'goal' | 'action-add' | 'action' | 'focus' | 'habit-add' | 'habit' | 'review'
+export type MutationScope = 'goal-add' | 'goal' | 'action-add' | 'action' | 'focus' | 'habit-add' | 'habit' | 'review' | 'journal-add' | 'journal'
 
 export interface HistoryNotice {
   ownerId: string
@@ -85,7 +95,7 @@ interface ActiveMutation {
   task: Promise<unknown>
 }
 
-const empty: AppData = { areas: [], goals: [], actions: [], habits: [], checkins: [], reviews: [], focusCommitments: [] }
+const empty: AppData = { areas: [], goals: [], actions: [], habits: [], checkins: [], reviews: [], journals: [], focusCommitments: [] }
 const DataContext = createContext<DataValue | null>(null)
 
 function now() { return new Date().toISOString() }
@@ -193,6 +203,7 @@ function applyQueuedSnapshot(current: AppData, operation: PendingOperation, snap
     case 'habit': return { ...current, habits: restore(current.habits) }
     case 'habit_checkin': return { ...current, checkins: restore(current.checkins) }
     case 'review': return { ...current, reviews: restore(current.reviews) }
+    case 'journal': return { ...current, journals: restore(current.journals ?? []) }
   }
 }
 
@@ -203,6 +214,7 @@ function currentQueuedSnapshot(current: AppData, operation: PendingOperation): R
     : descriptor.entityType === 'action' ? current.actions.find((item) => item.id === descriptor.entityId)
     : descriptor.entityType === 'habit' ? current.habits.find((item) => item.id === descriptor.entityId)
     : descriptor.entityType === 'habit_checkin' ? current.checkins.find((item) => item.id === descriptor.entityId)
+    : descriptor.entityType === 'journal' ? current.journals?.find((item) => item.id === descriptor.entityId)
     : current.reviews.find((item) => item.id === descriptor.entityId)
   return row ? { ...row } as unknown as Record<string, unknown> : null
 }
@@ -216,6 +228,7 @@ function stampEntityRevision(current: AppData, descriptor: MutationDescriptor, r
     case 'habit': return { ...current, habits: stamp(current.habits) }
     case 'habit_checkin': return { ...current, checkins: stamp(current.checkins) }
     case 'review': return { ...current, reviews: stamp(current.reviews) }
+    case 'journal': return { ...current, journals: stamp(current.journals ?? []) }
   }
 }
 
@@ -1058,6 +1071,108 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }, 'Обзор не сохранён. Изменение отменено — попробуйте ещё раз.', mutationIntent('save-review', { week, input }), false)
   }
 
+  const addJournalEntry = async (input: NewJournalEntry) => {
+    const currentUser = requireUser()
+    const safeType = input.entryType
+    return executeMutation(currentUser.id, [['journal-add']], () => {
+      const safeDate = input.date.trim()
+      const safeTitle = input.title.trim()
+      const safeContent = input.content.trimEnd()
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(safeDate)) throw new Error('Неверный формат даты записи')
+      if (!safeTitle) throw new Error('Заголовок записи должен содержать от 1 до 180 символов')
+      if (safeTitle.length > 180) throw new Error('Заголовок записи не должен быть длиннее 180 символов')
+      if (safeContent.length > 5000) throw new Error('Содержимое записи не должно быть длиннее 5000 символов')
+      const mutationId = crypto.randomUUID()
+      const entry: JournalEntry = {
+        id: crypto.randomUUID(),
+        user_id: currentUser.id,
+        date: safeDate,
+        entry_type: safeType,
+        title: safeTitle,
+        content: safeContent,
+        created_at: now(),
+        updated_at: now(),
+        revision: 1,
+        last_mutation_id: mutationId,
+      }
+      const descriptor = historyDescriptor(mutationId, 'journal', entry.id, 'journal_create', `Запись добавлена: ${entry.title}`, 0, null)
+      const apply = (latest: AppData) => ({
+        ...latest,
+        journals: [{ ...entry }, ...(latest.journals ?? [])],
+      })
+      const rollback = (latest: AppData) => ({
+        ...latest,
+        journals: (latest.journals ?? []).filter((item) => item.id !== entry.id),
+      })
+      return {
+        apply,
+        rollback,
+        persist: () => persistOrQueue(currentUser.id, 'dostigator_journals', rowPayload(entry), descriptor),
+        result: entry,
+        history: { descriptor, revert: rollback },
+      }
+    }, 'Запись в дневнике не сохранена. Попробуйте ещё раз.', mutationIntent('add-journal-entry', input))
+  }
+
+  const updateJournalEntry = async (id: string, updates: Partial<Pick<JournalEntry, 'date' | 'entry_type' | 'title' | 'content'>>) => {
+    const currentUser = requireUser()
+    return executeMutation(currentUser.id, [['journal', id]], (current) => {
+      const entry = current.journals?.find((item) => item.id === id && item.user_id === currentUser.id)
+      if (!entry) return { apply: (latest: AppData) => latest, rollback: (latest: AppData) => latest, persist: async () => undefined, result: undefined }
+      const normalized = {
+        ...updates,
+        ...(typeof updates.date === 'string' ? { date: updates.date.trim() } : {}),
+        ...(typeof updates.title === 'string' ? { title: updates.title.trim() } : {}),
+        ...(typeof updates.content === 'string' ? { content: updates.content.trimEnd() } : {}),
+      }
+      if (typeof normalized.date === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(normalized.date)) throw new Error('Неверный формат даты записи')
+      if (typeof normalized.title === 'string' && (!normalized.title || normalized.title.length > 180)) throw new Error('Заголовок записи должен содержать от 1 до 180 символов')
+      if (typeof normalized.content === 'string' && normalized.content.length > 5000) throw new Error('Содержимое записи не должно быть длиннее 5000 символов')
+      const safe = {
+        ...normalized,
+      }
+      if (!Object.entries(safe).some(([key, value]) => entry[key as keyof JournalEntry] !== value)) {
+        return { apply: (latest: AppData) => latest, rollback: (latest: AppData) => latest, persist: async () => undefined, result: undefined }
+      }
+      const mutationId = crypto.randomUUID()
+      const descriptor = historyDescriptor(mutationId, 'journal', id, 'journal_edit', `Запись изменена: ${entry.title}`, entry.revision ?? 0, entry)
+      const next = nextRevision({ ...entry, ...safe, updated_at: now() }, mutationId)
+      const revert = (latest: AppData) => ({ ...latest, journals: (latest.journals ?? []).map((item) => item.id === id ? entry : item) })
+      return {
+        apply: (latest: AppData) => ({ ...latest, journals: (latest.journals ?? []).map((item) => item.id === id ? next : item) }),
+        rollback: (latest: AppData) => ({ ...latest, journals: (latest.journals ?? []).map((item) => item.id === id && item.updated_at === next.updated_at ? entry : item) }),
+        persist: () => persistOrQueue(currentUser.id, 'dostigator_journals', rowPayload(next), descriptor),
+        result: undefined,
+        history: { descriptor, revert },
+      }
+    }, 'Изменение записи отклонено. Запись не обновлена', mutationIntent('update-journal-entry', { id, updates }))
+  }
+
+  const deleteJournalEntry = async (id: string) => {
+    const currentUser = requireUser()
+    return executeMutation(currentUser.id, [['journal', id]], (current) => {
+      const index = (current.journals ?? []).findIndex((item) => item.id === id && item.user_id === currentUser.id)
+      if (index < 0) return { apply: (latest: AppData) => latest, rollback: (latest: AppData) => latest, persist: async () => undefined, result: undefined }
+      const entry = current.journals?.[index]
+      if (!entry) return { apply: (latest: AppData) => latest, rollback: (latest: AppData) => latest, persist: async () => undefined, result: undefined }
+      const descriptor = historyDescriptor(crypto.randomUUID(), 'journal', id, 'journal_delete', `Запись удалена: ${entry.title}`, entry.revision ?? 0, entry)
+      const apply = (latest: AppData) => ({ ...latest, journals: (latest.journals ?? []).filter((item) => item.id !== id) })
+      const rollback = (latest: AppData) => {
+        if (latest.journals?.some((item) => item.id === id)) return latest
+        const journals = [...(latest.journals ?? [])]
+        journals.splice(Math.min(index, journals.length), 0, entry)
+        return { ...latest, journals }
+      }
+      return {
+        apply,
+        rollback,
+        persist: () => persistOrQueue(currentUser.id, 'dostigator_journals', rowPayload(entry), descriptor),
+        result: undefined,
+        history: { descriptor, revert: rollback },
+      }
+    }, 'Не удалось удалить запись. Изменение отменено.', mutationIntent('delete-journal-entry', id))
+  }
+
   const visibleData = dataOwnerId === (user?.id ?? null) ? data : empty
   const visibleMutationError = mutationNotice && mutationNotice.ownerId === user?.id ? mutationNotice.message : null
   const value: DataValue = {
@@ -1067,6 +1182,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     clearMutationError, dismissHistoryNotice, undoLastMutation, undoHistoryMutation, isMutating, refresh, retrySync, resolveFailedSync,
     addGoal, updateGoal, addAction, updateAction, toggleAction, deleteAction, toggleFocus,
     addHabit, updateHabit, toggleHabitToday, setHabitActive, saveReview,
+    addJournalEntry, updateJournalEntry, deleteJournalEntry,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
