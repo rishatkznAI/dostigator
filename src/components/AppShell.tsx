@@ -9,7 +9,7 @@ const navigation = [
   { to: '/nutrition', label: 'Питание', shortLabel: 'Еда', icon: Utensils },
   { to: '/progress', label: 'Прогресс', shortLabel: 'Рост', icon: TrendingUp },
   { to: '/review', label: 'Обзор', shortLabel: 'Итоги', icon: BarChart3 },
-  { to: '/journal', label: 'Дневник', shortLabel: 'День', icon: NotebookPen },
+  { to: '/journal', label: 'Дневник', shortLabel: 'Записи', icon: NotebookPen },
   { to: '/settings', label: 'Профиль', shortLabel: 'Я', icon: CircleUserRound },
 ]
 
