@@ -16,6 +16,7 @@ import type {
 } from '../types/training'
 import type { TableRow } from '../types/trainingDatabase'
 import { historySummary } from './workout'
+import { selectPreviousResults } from './workout-targets'
 
 type QueryError = { message: string }
 
@@ -145,23 +146,9 @@ export async function loadHistory(limit = 100): Promise<HistoryWorkout[]> {
   }))
 }
 
-export async function loadPreviousResults(exerciseKeys: string[]): Promise<Map<string, PreviousResult>> {
-  const wanted = new Set(exerciseKeys)
+export async function loadPreviousResults(exerciseKeys: string[], before?: string): Promise<Map<string, PreviousResult>> {
   const history = await loadHistory(250)
-  const results = new Map<string, PreviousResult>()
-  for (const session of history) {
-    for (const exercise of session.exercises) {
-      if (!exercise.exerciseKey || !wanted.has(exercise.exerciseKey) || results.has(exercise.exerciseKey)) continue
-      results.set(exercise.exerciseKey, {
-        sessionId: session.id,
-        finishedAt: session.finishedAt,
-        exerciseKey: exercise.exerciseKey,
-        sets: exercise.sets.filter((set) => set.done),
-      })
-    }
-    if (results.size === wanted.size) break
-  }
-  return results
+  return selectPreviousResults(history, exerciseKeys, before)
 }
 
 export async function syncWorkoutDraft(draft: WorkoutDraft): Promise<void> {

@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Cloud, CloudOff, Flag, Trash2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Cloud, CloudOff, Flag, HeartPulse, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
@@ -26,6 +26,8 @@ export function WorkoutPage() {
   const template = templates.find((item) => item.code === code)
   const [draft, setDraft] = useState<WorkoutDraft | null>(null)
   const [previous, setPrevious] = useState<Map<string, PreviousResult>>(new Map())
+  const [historyStatus, setHistoryStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [historyRetry, setHistoryRetry] = useState(0)
   const [alternatives, setAlternatives] = useState<Exercise[]>([])
   const [now, setNow] = useState(0)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(navigator.onLine ? 'local' : 'offline')
@@ -53,11 +55,19 @@ export function WorkoutPage() {
     const next = stored ?? createWorkoutDraft(template, user.id)
     saveActiveDraft(next)
     setDraft(next)
-    void Promise.all([
-      loadPreviousResults(template.items.map((item) => item.exercise.key)),
-      loadExerciseLibrary(),
-    ]).then(([results, library]) => { setPrevious(results); setAlternatives(library) }).catch(() => setPrevious(new Map()))
+    void loadExerciseLibrary().then(setAlternatives).catch(() => setAlternatives([]))
   }, [draft, navigate, template, user])
+
+  const exerciseKeys = draft?.exercises.map((exercise) => exercise.exercise.key).join(',')
+  useEffect(() => {
+    if (!exerciseKeys || !draft) return
+    let active = true
+    setHistoryStatus('loading')
+    void loadPreviousResults(exerciseKeys.split(','), draft.startedAt)
+      .then((results) => { if (active) { setPrevious(results); setHistoryStatus('ready') } })
+      .catch(() => { if (active) setHistoryStatus('error') })
+    return () => { active = false }
+  }, [exerciseKeys, draft?.startedAt, historyRetry])
 
   useEffect(() => {
     if (!draft) return
@@ -218,7 +228,6 @@ export function WorkoutPage() {
         sets: exercise.sets.map((set) => ({ ...set, weightKg: null, reps: null, rir: null, done: false, completedAt: null })),
       }),
     }))
-    void loadPreviousResults([replacement.key]).then((result) => setPrevious((current) => new Map([...current, ...result])))
   }
 
   const finishSummary = draftSummary(draft, new Date(now))
@@ -295,12 +304,20 @@ export function WorkoutPage() {
         <ReadinessCheck onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} />
       ) : <>
       {draft.readiness.mode === 'reduced' && <div className="reduced-mode-banner"><strong>Облегчённый режим</strong><span>Сегодня достаточно чистой техники и 2–3 RIR.</span></div>}
+      <section className="workout-progress-panel" aria-label="Прогресс тренировки">
+        <div><strong>{finishSummary.sets} / {draft.exercises.filter((exercise) => !exercise.skipped).flatMap((exercise) => exercise.sets).filter((set) => !set.isWarmup).length}</strong><span>рабочих подходов</span></div>
+        <progress aria-label="Выполненные рабочие подходы" value={finishSummary.sets} max={Math.max(1, draft.exercises.filter((exercise) => !exercise.skipped).flatMap((exercise) => exercise.sets).filter((set) => !set.isWarmup).length)} />
+        <p>Прошлый результат → цель сегодня → твой факт. Отмечай подход после выполнения.</p>
+      </section>
+      {historyStatus === 'error' && <button className="error-card" type="button" onClick={() => setHistoryRetry((value) => value + 1)}>Не удалось загрузить прошлые результаты. Нажми, чтобы повторить.</button>}
       <div className="exercise-list">
         {draft.exercises.map((exercise) => (
           <ExerciseCard
             key={exercise.id}
             exercise={exercise}
             previous={previous.get(exercise.exercise.key)}
+            reduced={draft.readiness?.mode === 'reduced'}
+            historyStatus={historyStatus}
             onSetChange={(setId, field, value) => updateSet(exercise.id, setId, field, value)}
             onToggleDone={(set) => toggleDone(exercise.id, set)}
             onAddSet={(warmup) => addSet(exercise.id, warmup)}
@@ -311,6 +328,8 @@ export function WorkoutPage() {
           />
         ))}
       </div>
+
+      <Link className="workout-cardio-link" to="/training/cardio"><HeartPulse /><span><strong>Кардио и заметки</strong><small>Запиши время, дистанцию и самочувствие. Силовой черновик сохранён.</small></span></Link>
 
       <section className="finish-panel">
         <Flag />

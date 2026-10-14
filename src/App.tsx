@@ -5,6 +5,7 @@ import { DataProvider } from './context/DataContext'
 import { OnboardingGate } from './context/OnboardingContext'
 import { AppShell } from './components/AppShell'
 import { useSyncQueue } from './hooks/useSyncQueue'
+import { useCardioSync } from './hooks/useCardioSync'
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })))
@@ -32,6 +33,7 @@ function LoadingScreen() {
 function ProtectedApp() {
   const { user, loading } = useAuth()
   useSyncQueue(user?.id)
+  useCardioSync(user?.id)
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" replace />
   return <DataProvider><OnboardingGate fallback={<LoadingScreen />}><Outlet /></OnboardingGate></DataProvider>

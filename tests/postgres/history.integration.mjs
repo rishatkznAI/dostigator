@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
 import { journalCases } from './journal.cases.mjs'
+import { cardioCases } from './cardio.cases.mjs'
 
 const ownerA = '10000000-0000-4000-8000-000000000001'
 const ownerB = '20000000-0000-4000-8000-000000000002'
@@ -129,11 +130,12 @@ try {
   const files = (await readdir(migrationDir)).filter((file) => file.endsWith('.sql')).sort()
   for (const file of files) await admin.query(await readFile(join(migrationDir, file), 'utf8'))
   await journalCases(admin, asUser, ownerA, ownerB)
+  await cardioCases(admin, asUser, ownerA, ownerB)
   // The retroactive base migration must also be safe on an already-evolved database.
   await admin.query(await readFile(join(migrationDir, '20260825051101_create_trainlog_core_schema.sql'), 'utf8'))
   const trainlogTables = [
     'exercise_library', 'workout_templates', 'workout_template_items', 'workout_sessions',
-    'workout_session_exercises', 'workout_sets', 'body_measurements', 'nutrition_entries', 'daily_activity',
+    'workout_session_exercises', 'workout_sets', 'body_measurements', 'nutrition_entries', 'daily_activity', 'cardio_sessions',
   ]
   assert.deepEqual((await admin.query(`
     select relname from pg_class

@@ -5,12 +5,15 @@ import { ExerciseTechniqueImage } from './ExerciseTechniqueImage'
 import { WeightGuide } from './WeightGuide'
 import { formatRestDuration, getRestDurationSeconds } from '../lib/rest-period'
 import { getExerciseWeightGuide } from '../lib/weight-guide'
-import { formatSet, getCalibrationSuggestion, getOverloadRecommendation } from '../lib/workout'
+import { formatSet, getCalibrationSuggestion, parseRepRange } from '../lib/workout'
+import { formatSetTarget, getSetTargetStatus, getWorkoutTargets } from '../lib/workout-targets'
 import type { Exercise, PreviousResult, WorkoutExerciseDraft, WorkoutSetDraft } from '../types/training'
 
 type Props = {
   exercise: WorkoutExerciseDraft
   previous?: PreviousResult
+  reduced?: boolean
+  historyStatus?: 'loading' | 'ready' | 'error'
   onSetChange: (setId: string, field: 'weightKg' | 'reps' | 'rir', value: number | null) => void
   onToggleDone: (set: WorkoutSetDraft) => void
   onAddSet: (warmup: boolean) => void
@@ -22,12 +25,13 @@ type Props = {
 
 const numericValue = (value: number | null) => (value === null ? '' : value)
 
-export function ExerciseCard({ exercise, previous, onSetChange, onToggleDone, onAddSet, onRemoveSet, onSkip, onReplace, alternatives }: Props) {
+export function ExerciseCard({ exercise, previous, reduced = false, historyStatus = 'ready', onSetChange, onToggleDone, onAddSet, onRemoveSet, onSkip, onReplace, alternatives }: Props) {
   const [instructionsOpen, setInstructionsOpen] = useState(false)
   const [skipOpen, setSkipOpen] = useState(false)
   const [replaceOpen, setReplaceOpen] = useState(false)
-  const recommendation = getOverloadRecommendation(exercise.target, previous)
-  const previousSets = previous?.sets.filter((set) => set.done) ?? []
+  const recommendation = getWorkoutTargets(exercise.target, exercise.sets.filter((set) => !set.isWarmup).length, previous, reduced)
+  const previousSets = previous?.sets.filter((set) => set.done && !set.isWarmup && set.reps !== null) ?? []
+  const timed = parseRepRange(exercise.target)?.timed ?? false
   const restDuration = formatRestDuration(getRestDurationSeconds(exercise.exercise.key))
   const weightGuide = getExerciseWeightGuide(exercise.exercise.key)
   const lastDone = [...exercise.sets].reverse().find((set) => set.done)
@@ -51,27 +55,35 @@ export function ExerciseCard({ exercise, previous, onSetChange, onToggleDone, on
       ) : <>
 
       <div className={`recommendation ${recommendation.mode}`}>
-        <div><span>{recommendation.eyebrow}</span><p>{recommendation.message}</p></div>
+        <div><span>{historyStatus === 'loading' ? 'Загружаем прошлый результат…' : historyStatus === 'error' ? 'История недоступна' : recommendation.mode === 'baseline' ? 'Первая точка' : 'Твоя цель сегодня'}</span><p>{historyStatus === 'ready' ? recommendation.message : 'Дождись истории, чтобы сравнить результат. Ориентируйся на диапазон программы и самочувствие.'}</p></div>
         <ChevronRight size={20} />
       </div>
 
-      {weightGuide && <WeightGuide guide={weightGuide} />}
+      {weightGuide && <details className="weight-guide-details" open={!previousSets.length}><summary>Ориентиры для первого раза</summary><WeightGuide guide={weightGuide} /></details>}
       {calibration && <p className="calibration-tip" role="status">{calibration}</p>}
 
       <div className="previous-result">
-        <span>Прошлый раз</span>
-        {previousSets.length ? (
-          <div>{previousSets.map((set) => <small key={set.id}>{formatSet(set)}</small>)}</div>
-        ) : <small>Пока нет завершённых подходов</small>}
+        <span>Прошлый раз {previousSets.length && previous ? `· ${new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(previous.finishedAt))}` : ''}</span>
+        <small>{historyStatus === 'ready' ? previousSets.length ? `${previousSets.length} рабочих подходов · сравнение ниже` : 'Первая запись станет твоим ориентиром' : 'Пока нельзя определить прошлый результат'}</small>
       </div>
 
+      <p className="rir-explainer">RIR — сколько повторов осталось в запасе. Цель: {reduced ? '3' : '2'}. {timed ? 'В колонке времени указывай секунды удержания.' : 'Сначала техника, затем прибавка.'}</p>
+
       <div className="sets-table">
-        <div className="set-row set-head" aria-hidden="true">
-          <span>№</span><span>кг</span><span>повт.</span><span>RIR</span><span>✓</span><span />
-        </div>
         {exercise.sets.map((set, index) => {
-          const last = previousSets[index]
+          const workIndex = exercise.sets.slice(0, index).filter((item) => !item.isWarmup).length
+          const last = set.isWarmup || historyStatus !== 'ready' ? undefined : previousSets[workIndex]
+          const target = set.isWarmup || historyStatus !== 'ready' ? undefined : recommendation.targets[workIndex]
+          const status = getSetTargetStatus(set, target)
           return (
+            <div className="set-block" key={set.id}>
+              {!set.isWarmup && <div className="set-comparison">
+                <div><span>Прошлый раз</span><strong>{last ? timed ? `${last.reps} сек · RIR ${last.rir ?? '—'}` : formatSet(last) : historyStatus === 'ready' ? 'Нет записи' : 'Недоступен'}</strong></div>
+                <ChevronRight size={16} />
+                <div className="set-target"><span>Цель сегодня</span><strong>{target ? formatSetTarget(target) : exercise.target}</strong><small>{target ? `запас ${target.rir} RIR` : 'подбери рабочий вес'}</small></div>
+              </div>}
+            <p className="set-entry-label">{set.isWarmup ? 'Разминочный подход' : 'Твой факт'}</p>
+            <div className="set-row set-head" aria-hidden="true"><span>№</span><span>кг</span><span>{timed ? 'сек' : 'повт.'}</span><span>RIR</span><span>✓</span><span /></div>
             <div className={`set-row ${set.done ? 'complete' : ''}`} key={set.id}>
               <strong>{set.isWarmup ? 'Р' : set.setNumber}</strong>
               <input
@@ -86,7 +98,7 @@ export function ExerciseCard({ exercise, previous, onSetChange, onToggleDone, on
                 onChange={(event) => onSetChange(set.id, 'weightKg', event.target.value === '' ? null : Number(event.target.value))}
               />
               <input
-                aria-label={`${exercise.exercise.name}, подход ${set.setNumber}, повторы`}
+                aria-label={`${exercise.exercise.name}, подход ${set.setNumber}, ${timed ? 'секунды' : 'повторы'}`}
                 type="number"
                 inputMode="numeric"
                 min="1"
@@ -111,6 +123,8 @@ export function ExerciseCard({ exercise, previous, onSetChange, onToggleDone, on
                 <Check size={20} />
               </button>
               <button type="button" className="set-remove" aria-label={`Удалить подход ${set.setNumber}`} onClick={() => onRemoveSet(set)} disabled={exercise.sets.length <= 1}><Trash2 size={17} /></button>
+            </div>
+            {status && <p className={`set-feedback ${status === 'Цель выполнена' ? 'achieved' : ''}`} role="status">{status}</p>}
             </div>
           )
         })}

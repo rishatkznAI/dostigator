@@ -203,6 +203,24 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['nutrition_entries']['Insert']>
         Relationships: []
       }
+      cardio_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          activity_date: string
+          kind: 'walk' | 'bike' | 'elliptical' | 'outdoor' | 'other'
+          duration_minutes: number
+          distance_km: number | null
+          effort: number | null
+          average_pulse: number | null
+          note: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['cardio_sessions']['Row'], 'created_at'> & { created_at?: string }
+        Update: Partial<Database['public']['Tables']['cardio_sessions']['Insert']>
+        Relationships: []
+      }
       daily_activity: {
         Row: {
           id: string

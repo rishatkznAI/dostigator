@@ -1,6 +1,8 @@
 import { Activity, ArrowLeft, Bike, CircleAlert, Footprints, Gauge, HeartPulse, Timer, Wind } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { CardioJournal } from '../components/CardioJournal'
 
 type CardioExercise = {
   title: string
@@ -73,6 +75,7 @@ const weekPlan = [
 ]
 
 export function CardioPage() {
+  const { user } = useAuth()
   return (
     <div className="page cardio-page">
       <Link className="back-link" to="/training"><ArrowLeft /> К тренировкам</Link>
@@ -88,6 +91,8 @@ export function CardioPage() {
           <span><strong>4–6/10</strong> усилие</span>
         </div>
       </header>
+
+      {user && <CardioJournal key={user.id} userId={user.id} />}
 
       <section className="section-block">
         <div className="section-heading">

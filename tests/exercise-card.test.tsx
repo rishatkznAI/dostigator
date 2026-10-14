@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ExerciseCard } from '../src/components/ExerciseCard'
 import type { PreviousResult, WorkoutExerciseDraft } from '../src/types/training'
 
@@ -26,6 +26,7 @@ const previous: PreviousResult = {
 }
 
 describe('exercise card', () => {
+  afterEach(cleanup)
   it('shows previous result and database-backed instructions', () => {
     render(<ExerciseCard exercise={exercise} previous={previous} onSetChange={vi.fn()} onToggleDone={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
     expect(screen.getByText(/60 кг × 12/)).toBeInTheDocument()
@@ -50,5 +51,15 @@ describe('exercise card', () => {
     expect(closeButton).toHaveFocus()
     fireEvent.click(closeButton)
     expect(opener).toHaveFocus()
+  })
+
+  it('keeps work-set comparisons aligned when a warmup is inserted', () => {
+    const warmed = { ...exercise, sets: [{ ...exercise.sets[0]!, id: 'warmup', isWarmup: true }, { ...exercise.sets[0]!, setNumber: 2 }] }
+    render(<ExerciseCard exercise={warmed} previous={previous} onSetChange={vi.fn()} onToggleDone={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
+    const workInput = screen.getByRole('spinbutton', { name: /подход 2, вес кг/ })
+    expect(workInput).toHaveAttribute('placeholder', '60')
+    const comparison = workInput.closest('.set-block')!
+    expect(within(comparison as HTMLElement).getByText('62,5 кг × 8')).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: /подход 1, вес кг/ })).toHaveAttribute('placeholder', '—')
   })
 })

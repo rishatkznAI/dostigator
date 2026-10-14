@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTemplates } from '../hooks/useTemplates'
 import { loadHistory, loadMeasurements } from '../lib/trainingRepository'
 import { getActiveDraft } from '../lib/storage'
-import { formatNumber, getCompletedTemplateCodesThisWeek, getNextMandatoryWorkout, getWeeklyStats } from '../lib/workout'
+import { formatNumber, getCompletedTemplateCodesThisWeek, getNextMandatoryWorkout, getWeeklyStats, historySummary } from '../lib/workout'
 import type { BodyMeasurement, HistoryWorkout } from '../types/training'
 
 const formatDelta = (current: number | null, previous: number | null, unit: string) => {
@@ -126,6 +126,7 @@ export function TrainingPage() {
           {templates.map((template) => {
             const recommended = template.code === nextMandatory
             const completed = completedThisWeek.has(template.code)
+            const lastWorkout = history.find((workout) => workout.templateCode === template.code)
             return (
             <article className={`template-card ${recommended ? 'recommended' : ''}`} key={template.code}>
               <div className="template-code">{template.code}</div>
@@ -136,6 +137,7 @@ export function TrainingPage() {
                   <span>{scheduleByCode[template.code] ?? 'По плану'}</span>
                   <span>{template.items.length} упражнений · {template.items.reduce((sum, item) => sum + item.setCount, 0)} подходов</span>
                 </div>
+                {lastWorkout && <div className="template-last-result">Прошлый раз · {new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(lastWorkout.finishedAt))} · {historySummary(lastWorkout).sets} рабочих подходов</div>}
               </div>
               <Link className="start-button" to={`/training/workout/${template.code}`} aria-label={`Начать тренировку ${template.code}`}>
                 <Play size={18} fill="currentColor" />
@@ -148,8 +150,8 @@ export function TrainingPage() {
           <div className="cardio-entry-icon"><HeartPulse /></div>
           <div>
             <span>Кардио</span>
-            <strong>Когда, сколько и как делать</strong>
-            <small>Недельный план, правильный темп и четыре варианта нагрузки</small>
+            <strong>Записать кардио и заметку</strong>
+            <small>Прошлый результат, время, дистанция и самочувствие</small>
           </div>
           <ArrowRight />
         </Link>

@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { CardioPage } from './CardioPage'
+
+vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: null }) }))
 
 describe('cardio page', () => {
   it('shows a weekly plan, intensity target and exercise instructions', () => {

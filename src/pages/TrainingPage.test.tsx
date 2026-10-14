@@ -48,7 +48,7 @@ describe('full training entry point', () => {
     expect(screen.getByRole('link', { name: 'Питание' })).toHaveAttribute('href', '/nutrition')
     expect(screen.getByRole('link', { name: 'Прогресс' })).toHaveAttribute('href', '/training/progress')
     expect(screen.getByRole('link', { name: 'Замеры' })).toHaveAttribute('href', '/training/body')
-    expect(screen.getByRole('link', { name: /Когда, сколько и как делать/ })).toHaveAttribute('href', '/training/cardio')
+    expect(screen.getByRole('link', { name: /Записать кардио и заметку/ })).toHaveAttribute('href', '/training/cardio')
     expect(screen.getByRole('link', { name: /Спа и восстановление/ })).toHaveAttribute('href', '/training/spa')
     for (const code of ['A', 'B', 'C']) {
       expect(screen.getByRole('link', { name: `Начать тренировку ${code}` })).toHaveAttribute('href', `/training/workout/${code}`)
