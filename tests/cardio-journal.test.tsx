@@ -12,6 +12,7 @@ describe('cardio journal', () => {
   it('saves, reloads and edits a cardio note without creating another session', async () => {
     const view = render(<MemoryRouter><CardioJournal userId="owner" /></MemoryRouter>)
     fireEvent.change(screen.getByLabelText('Время, мин'), { target: { value: '25' } })
+    fireEvent.click(screen.getByRole('radio', { name: '6 из 10 — Умеренно' }))
     fireEvent.change(screen.getByLabelText('Заметка по кардио'), { target: { value: 'Уклон 4%, комфортно' } })
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить кардио' }))
     await waitFor(() => expect(getCachedCardio('owner')[0]?.note).toBe('Уклон 4%, комфортно'))
@@ -21,6 +22,7 @@ describe('cardio journal', () => {
     expect(screen.getAllByText('Уклон 4%, комфортно')).toHaveLength(2)
     fireEvent.click(screen.getByRole('button', { name: /Редактировать кардио/ }))
     expect(screen.getByLabelText('Время, мин')).toHaveValue(25)
+    expect(screen.getByRole('radio', { name: '6 из 10 — Умеренно' })).toBeChecked()
     fireEvent.change(screen.getByLabelText('Заметка по кардио'), { target: { value: 'Уклон 6%, тяжело' } })
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }))
     await waitFor(() => expect(getCachedCardio('owner')[0]?.note).toBe('Уклон 6%, тяжело'))

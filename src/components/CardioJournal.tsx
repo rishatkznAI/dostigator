@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { CARDIO_CHANGED_EVENT, cardioKinds, enqueueCardio, getCachedCardio, getCardioQueue, loadCardio, syncCardio, type CardioSession } from '../lib/cardio'
 import { localDate, startOfWeek } from '../lib/date'
 import { createId, formatNumber } from '../lib/workout'
+import { EffortPicker } from './EffortPicker'
 
 const blankForm = () => ({ date: localDate(), kind: 'walk' as CardioSession['kind'], minutes: '', distance: '', effort: '', pulse: '', note: '' })
 
@@ -100,7 +101,8 @@ export function CardioJournal({ userId }: { userId: string }) {
           <div><span>Ориентир сегодня</span><strong>{previous ? `${previous.duration_minutes} мин` : 'По плану и самочувствию'}</strong><small>Повтори время при сопоставимом темпе. Увеличение времени или скорости — отдельный выбор по самочувствию.</small></div>
         </div>
         <div className="form-row"><label>Время, мин<input type="number" inputMode="numeric" min="1" max="1440" step="1" required value={form.minutes} placeholder={previous ? String(previous.duration_minutes) : 'Например, 20'} onChange={(event) => field('minutes', event.target.value)} /></label><label>Дистанция, км<input type="number" inputMode="decimal" min="0.01" max="1000" step="0.01" value={form.distance} placeholder="Необязательно" onChange={(event) => field('distance', event.target.value)} /></label></div>
-        <div className="form-row"><label>Усилие, 1–10<input type="number" inputMode="numeric" min="1" max="10" step="1" value={form.effort} placeholder="Как тяжело было" onChange={(event) => field('effort', event.target.value)} /></label><label>Средний пульс<input type="number" inputMode="numeric" min="30" max="250" step="1" value={form.pulse} placeholder="Если измерял" onChange={(event) => field('pulse', event.target.value)} /></label></div>
+        <EffortPicker value={form.effort ? Number(form.effort) : null} onChange={(value) => field('effort', value === null ? '' : String(value))} />
+        <label>Средний пульс<input type="number" inputMode="numeric" min="30" max="250" step="1" value={form.pulse} placeholder="Если измерял" onChange={(event) => field('pulse', event.target.value)} /></label>
         <label>Заметка по кардио<textarea rows={3} maxLength={4000} value={form.note} placeholder="Скорость, уклон, сопротивление, дыхание и самочувствие…" onChange={(event) => field('note', event.target.value)} /></label>
         <button className="primary-button wide" type="submit" disabled={saving}>{saving ? 'Сохраняем…' : editing ? 'Сохранить изменения' : 'Сохранить кардио'}</button>
         {editing && <button className="text-button" type="button" onClick={() => { setEditing(null); setForm(blankForm()) }}>Отменить редактирование</button>}

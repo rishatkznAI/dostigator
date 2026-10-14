@@ -1,20 +1,24 @@
-import { Check, ChevronRight, CircleHelp, Plus, RefreshCw, SkipForward, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, CircleHelp, Plus, RefreshCw, SkipForward, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { BottomSheet } from './BottomSheet'
 import { ExerciseTechniqueImage } from './ExerciseTechniqueImage'
 import { WeightGuide } from './WeightGuide'
+import { SetRecorder } from './SetRecorder'
 import { formatRestDuration, getRestDurationSeconds } from '../lib/rest-period'
 import { getExerciseWeightGuide } from '../lib/weight-guide'
 import { formatSet, getCalibrationSuggestion, parseRepRange } from '../lib/workout'
-import { formatSetTarget, getSetTargetStatus, getWorkoutTargets } from '../lib/workout-targets'
+import { getSetTargetStatus, getWorkoutTargets } from '../lib/workout-targets'
+import { getNextSetTarget, getSetCoachMessage, type SetEntryValues } from '../lib/set-logging'
 import type { Exercise, PreviousResult, WorkoutExerciseDraft, WorkoutSetDraft } from '../types/training'
 
 type Props = {
   exercise: WorkoutExerciseDraft
   previous?: PreviousResult
   reduced?: boolean
+  active?: boolean
   historyStatus?: 'loading' | 'ready' | 'error'
   onSetChange: (setId: string, field: 'weightKg' | 'reps' | 'rir', value: number | null) => void
+  onApplyValues: (setId: string, values: SetEntryValues) => void
   onToggleDone: (set: WorkoutSetDraft) => void
   onAddSet: (warmup: boolean) => void
   onRemoveSet: (set: WorkoutSetDraft) => void
@@ -23,12 +27,11 @@ type Props = {
   alternatives: Exercise[]
 }
 
-const numericValue = (value: number | null) => (value === null ? '' : value)
-
-export function ExerciseCard({ exercise, previous, reduced = false, historyStatus = 'ready', onSetChange, onToggleDone, onAddSet, onRemoveSet, onSkip, onReplace, alternatives }: Props) {
+export function ExerciseCard({ exercise, previous, reduced = false, active = true, historyStatus = 'ready', onSetChange, onApplyValues, onToggleDone, onAddSet, onRemoveSet, onSkip, onReplace, alternatives }: Props) {
   const [instructionsOpen, setInstructionsOpen] = useState(false)
   const [skipOpen, setSkipOpen] = useState(false)
   const [replaceOpen, setReplaceOpen] = useState(false)
+  const [selectedSetId, setSelectedSetId] = useState<string | null>(null)
   const recommendation = getWorkoutTargets(exercise.target, exercise.sets.filter((set) => !set.isWarmup).length, previous, reduced)
   const previousSets = previous?.sets.filter((set) => set.done && !set.isWarmup && set.reps !== null) ?? []
   const timed = parseRepRange(exercise.target)?.timed ?? false
@@ -36,12 +39,16 @@ export function ExerciseCard({ exercise, previous, reduced = false, historyStatu
   const weightGuide = getExerciseWeightGuide(exercise.exercise.key)
   const lastDone = [...exercise.sets].reverse().find((set) => set.done)
   const calibration = previousSets.length ? null : getCalibrationSuggestion(exercise.target, lastDone)
+  const workingSets = exercise.sets.filter((set) => !set.isWarmup)
+  const completedSets = workingSets.filter((set) => set.done).length
+  const openSetId = selectedSetId && exercise.sets.some((set) => set.id === selectedSetId) ? selectedSetId : active ? exercise.sets.find((set) => !set.done)?.id : undefined
+  const lastWorkingSet = [...workingSets].reverse().find((set) => set.done)
 
   return (
-    <article className={`exercise-card ${exercise.skipped ? 'skipped' : ''}`} data-exercise-key={exercise.exercise.key}>
+    <article id={`exercise-${exercise.id}`} className={`exercise-card ${exercise.skipped ? 'skipped' : ''}`} data-exercise-key={exercise.exercise.key}>
       <header className="exercise-card-header">
         <div className="exercise-number">{String(exercise.sortOrder).padStart(2, '0')}</div>
-        <div><h2>{exercise.exercise.name}</h2><p>{exercise.sets.length} подхода · цель {exercise.target} · отдых {restDuration}</p></div>
+        <div><h2>{exercise.exercise.name}</h2><p>Рабочие подходы: {completedSets} из {workingSets.length} · цель {exercise.target} · отдых {restDuration}</p></div>
         <button className="how-button" type="button" onClick={() => setInstructionsOpen(true)}>
           <CircleHelp size={18} /><span>Как делать</span>
         </button>
@@ -61,69 +68,29 @@ export function ExerciseCard({ exercise, previous, reduced = false, historyStatu
 
       {weightGuide && <details className="weight-guide-details" open={!previousSets.length}><summary>Ориентиры для первого раза</summary><WeightGuide guide={weightGuide} /></details>}
       {calibration && <p className="calibration-tip" role="status">{calibration}</p>}
+      <div className="set-coach-tip"><strong>{completedSets === workingSets.length ? 'Упражнение выполнено' : 'Тренер · следующий шаг'}</strong><p>{completedSets === workingSets.length ? 'Все рабочие подходы записаны. После отдыха переходи к следующему упражнению.' : getSetCoachMessage(exercise.target, lastWorkingSet, reduced)}</p></div>
 
       <div className="previous-result">
         <span>Прошлый раз {previousSets.length && previous ? `· ${new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(previous.finishedAt))}` : ''}</span>
         <small>{historyStatus === 'ready' ? previousSets.length ? `${previousSets.length} рабочих подходов · сравнение ниже` : 'Первая запись станет твоим ориентиром' : 'Пока нельзя определить прошлый результат'}</small>
       </div>
 
-      <p className="rir-explainer">RIR — сколько повторов осталось в запасе. Цель: {reduced ? '3' : '2'}. {timed ? 'В колонке времени указывай секунды удержания.' : 'Сначала техника, затем прибавка.'}</p>
+      <p className="rir-explainer">Количество подходов уже задано программой. Записывай их по очереди. Запас выбирай кнопкой после выполнения — вводить его вручную не нужно.</p>
 
       <div className="sets-table">
         {exercise.sets.map((set, index) => {
           const workIndex = exercise.sets.slice(0, index).filter((item) => !item.isWarmup).length
+          const displayNumber = set.isWarmup ? exercise.sets.slice(0, index).filter((item) => item.isWarmup).length + 1 : workIndex + 1
           const last = set.isWarmup || historyStatus !== 'ready' ? undefined : previousSets[workIndex]
-          const target = set.isWarmup || historyStatus !== 'ready' ? undefined : recommendation.targets[workIndex]
+          const previousInSession = [...exercise.sets.slice(0, index)].reverse().find((item) => item.done && !item.isWarmup)
+          const target = set.isWarmup ? undefined : getNextSetTarget(exercise.target, previousInSession, historyStatus === 'ready' ? recommendation.targets[workIndex] : undefined, reduced)
           const status = getSetTargetStatus(set, target)
+          const open = set.id === openSetId
+          const label = set.isWarmup ? 'Разминочный подход' : `Рабочий подход ${workIndex + 1} из ${workingSets.length}`
           return (
-            <div className="set-block" key={set.id}>
-              {!set.isWarmup && <div className="set-comparison">
-                <div><span>Прошлый раз</span><strong>{last ? timed ? `${last.reps} сек · RIR ${last.rir ?? '—'}` : formatSet(last) : historyStatus === 'ready' ? 'Нет записи' : 'Недоступен'}</strong></div>
-                <ChevronRight size={16} />
-                <div className="set-target"><span>Цель сегодня</span><strong>{target ? formatSetTarget(target) : exercise.target}</strong><small>{target ? `запас ${target.rir} RIR` : 'подбери рабочий вес'}</small></div>
-              </div>}
-            <p className="set-entry-label">{set.isWarmup ? 'Разминочный подход' : 'Твой факт'}</p>
-            <div className="set-row set-head" aria-hidden="true"><span>№</span><span>кг</span><span>{timed ? 'сек' : 'повт.'}</span><span>RIR</span><span>✓</span><span /></div>
-            <div className={`set-row ${set.done ? 'complete' : ''}`} key={set.id}>
-              <strong>{set.isWarmup ? 'Р' : set.setNumber}</strong>
-              <input
-                aria-label={`${exercise.exercise.name}, подход ${set.setNumber}, вес кг`}
-                type="number"
-                inputMode="decimal"
-                min="0"
-                max="1000"
-                step="0.5"
-                placeholder={last?.weightKg?.toString() ?? '—'}
-                value={numericValue(set.weightKg)}
-                onChange={(event) => onSetChange(set.id, 'weightKg', event.target.value === '' ? null : Number(event.target.value))}
-              />
-              <input
-                aria-label={`${exercise.exercise.name}, подход ${set.setNumber}, ${timed ? 'секунды' : 'повторы'}`}
-                type="number"
-                inputMode="numeric"
-                min="1"
-                max="1000"
-                step="1"
-                placeholder={last?.reps?.toString() ?? '—'}
-                value={numericValue(set.reps)}
-                onChange={(event) => onSetChange(set.id, 'reps', event.target.value === '' ? null : Number(event.target.value))}
-              />
-              <input
-                aria-label={`${exercise.exercise.name}, подход ${set.setNumber}, RIR`}
-                type="number"
-                inputMode="numeric"
-                min="0"
-                max="5"
-                step="1"
-                placeholder={last?.rir?.toString() ?? '—'}
-                value={numericValue(set.rir)}
-                onChange={(event) => onSetChange(set.id, 'rir', event.target.value === '' ? null : Number(event.target.value))}
-              />
-              <button type="button" className="set-check" aria-pressed={set.done} aria-label={`Подход ${set.setNumber} выполнен`} onClick={() => onToggleDone(set)}>
-                <Check size={20} />
-              </button>
-              <button type="button" className="set-remove" aria-label={`Удалить подход ${set.setNumber}`} onClick={() => onRemoveSet(set)} disabled={exercise.sets.length <= 1}><Trash2 size={17} /></button>
-            </div>
+            <div className={`set-block ${set.done ? 'recorded' : ''}`} key={set.id}>
+              <div className="set-summary-row"><button type="button" className="set-summary-button" aria-expanded={open} aria-controls={`set-${set.id}`} onClick={() => setSelectedSetId(set.id)}><span className="set-step-mark">{set.done ? <Check size={16} /> : set.isWarmup ? 'Р' : workIndex + 1}</span><span><strong>{label}</strong><small>{set.done ? timed ? `${set.reps} сек · RIR ${set.rir ?? '—'}` : formatSet(set) : open ? 'Выполни и запиши результат' : 'Ожидает выполнения'}</small></span><ChevronDown size={18} /></button><button type="button" className="set-remove" aria-label={`Удалить подход ${set.setNumber}`} onClick={() => onRemoveSet(set)} disabled={exercise.sets.length <= 1}><Trash2 size={17} /></button></div>
+              {open && <div id={`set-${set.id}`}><SetRecorder set={set} exerciseName={exercise.exercise.name} displayNumber={displayNumber} targetText={exercise.target} timed={timed} previous={last} previousInSession={previousInSession} target={target} onChange={(field, value) => onSetChange(set.id, field, value)} onApply={(values) => onApplyValues(set.id, values)} onComplete={() => { onToggleDone(set); setSelectedSetId(null) }} />{set.done && <button type="button" className="text-button undo-set-button" onClick={() => onToggleDone(set)}>Снять отметку выполнения</button>}</div>}
             {status && <p className={`set-feedback ${status === 'Цель выполнена' ? 'achieved' : ''}`} role="status">{status}</p>}
             </div>
           )

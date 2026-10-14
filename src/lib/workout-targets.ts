@@ -21,7 +21,7 @@ export function selectPreviousResults(history: HistoryWorkout[], keys: string[],
 export function getWorkoutTargets(target: string, plannedSets: number, previous?: PreviousResult, reduced = false) {
   const range = parseRepRange(target)
   const sets = previous?.sets.filter((set) => set.done && !set.isWarmup && set.reps !== null) ?? []
-  if (!range || !sets.length) return { mode: 'baseline', message: 'Запиши первый результат. Рабочий вес выбирай по технике, оставляя 2 повтора в запасе.', targets: [] as SetTarget[] }
+  if (!range || !sets.length) return { mode: 'baseline', message: reduced ? 'Запиши первый результат без прибавки нагрузки. Рабочий вес выбирай по технике, оставляя около 3 повторов в запасе.' : 'Запиши первый результат. Рабочий вес выбирай по технике, оставляя 2 повтора в запасе.', targets: [] as SetTarget[] }
   const recover = reduced || sets.some((set) => (set.reps ?? 0) < range.min || set.rir === 0)
   const increase = !recover && sets.length >= plannedSets && sets.every((set) => (set.reps ?? 0) >= range.max && (set.rir ?? 0) >= 2)
   const mode = recover ? 'recover' : increase ? 'increase' : 'reps'

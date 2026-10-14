@@ -15,6 +15,7 @@ import { primeRestAlert } from '../lib/rest-alert'
 import { clearActiveDraft, enqueueCancelledWorkout, enqueueDraft, getActiveDraft, removeCancelledWorkout, removeQueuedDraft, saveActiveDraft } from '../lib/storage'
 import { createId, createWorkoutDraft, draftSummary, finishWorkoutTimer, formatNumber, toggleWorkoutTimer, validateWorkoutSetValue, workoutDraftValidationError } from '../lib/workout'
 import { createWorkoutSyncQueue } from '../lib/workout-sync'
+import { applySetEntry, toggleSetAndPrepareNext, type SetEntryValues } from '../lib/set-logging'
 import type { Exercise, PreviousResult, WorkoutDraft, WorkoutSetDraft } from '../types/training'
 
 type SyncStatus = 'local' | 'syncing' | 'synced' | 'offline' | 'error'
@@ -161,14 +162,7 @@ export function WorkoutPage() {
       ...current,
       updatedAt: new Date().toISOString(),
       syncState: 'pending',
-      exercises: current.exercises.map((exercise) => exercise.id !== exerciseId ? exercise : {
-        ...exercise,
-        sets: exercise.sets.map((set) => set.id === target.id ? {
-          ...set,
-          done: nextDone,
-          completedAt: nextDone ? new Date().toISOString() : null,
-        } : set),
-      }),
+      exercises: current.exercises.map((exercise) => exercise.id !== exerciseId ? exercise : toggleSetAndPrepareNext(exercise, target.id, current.readiness?.mode === 'reduced')),
     }))
     if (nextDone) {
       primeRestAlert()
@@ -179,6 +173,19 @@ export function WorkoutPage() {
         activeRest: { until: Date.now() + plannedSeconds * 1000, exerciseName: exercise?.exercise.name ?? 'подхода', plannedSeconds },
       }))
     }
+  }
+
+  const applyValues = (exerciseId: string, setId: string, values: SetEntryValues) => {
+    const exercise = draft.exercises.find((item) => item.id === exerciseId)
+    if (!exercise) return
+    try {
+      applySetEntry(exercise, setId, values)
+      setMessage(null)
+      setDraft((current) => current && ({
+        ...current, updatedAt: new Date().toISOString(), syncState: 'pending',
+        exercises: current.exercises.map((item) => item.id === exerciseId ? applySetEntry(item, setId, values) : item),
+      }))
+    } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'Не удалось подставить результат') }
   }
 
   const addSet = (exerciseId: string, isWarmup: boolean) => setDraft((current) => current && ({
@@ -232,6 +239,9 @@ export function WorkoutPage() {
   }
 
   const finishSummary = draftSummary(draft, new Date(now))
+  const nextExercise = draft.exercises.find((exercise) => !exercise.skipped && exercise.sets.some((set) => !set.done && !set.isWarmup))
+  const nextSet = nextExercise?.sets.find((set) => !set.done)
+  const resting = draft.activeRest !== null && draft.activeRest.until > now
   const toggleTimer = () => setDraft((current) => current && toggleWorkoutTimer(current))
   const finish = async () => {
     const validationError = workoutDraftValidationError(draft)
@@ -310,6 +320,7 @@ export function WorkoutPage() {
         <progress aria-label="Выполненные рабочие подходы" value={finishSummary.sets} max={Math.max(1, draft.exercises.filter((exercise) => !exercise.skipped).flatMap((exercise) => exercise.sets).filter((set) => !set.isWarmup).length)} />
         <p>Прошлый результат → цель сегодня → твой факт. Отмечай подход после выполнения.</p>
       </section>
+      <section className="workout-coach-panel" aria-label="Тренер · текущий шаг"><p className="eyebrow">Тренер · текущий шаг</p><h2>{nextExercise ? resting ? 'Сначала восстанови дыхание' : nextExercise.exercise.name : 'Тренировка выполнена'}</h2><p>{nextExercise && nextSet ? `${nextSet.isWarmup ? 'Разминка' : `Рабочий подход ${nextExercise.sets.filter((set) => !set.isWarmup).findIndex((set) => set.id === nextSet.id) + 1} из ${nextExercise.sets.filter((set) => !set.isWarmup).length}`} · ${nextExercise.target}. ${resting ? 'Дождись сигнала таймера отдыха.' : 'Открой подход, проверь ориентир и запиши факт после выполнения.'}` : 'Все запланированные подходы выполнены или упражнения пропущены. Проверь итог и сохрани тренировку.'}</p>{nextExercise && <button type="button" className="primary-button" onClick={() => document.getElementById(`exercise-${nextExercise.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>К текущему упражнению</button>}</section>
       {historyStatus === 'error' && <button className="error-card" type="button" onClick={() => setHistoryRetry((value) => value + 1)}>Не удалось загрузить прошлые результаты. Нажми, чтобы повторить.</button>}
       <div className="exercise-list">
         {draft.exercises.map((exercise) => (
@@ -318,8 +329,10 @@ export function WorkoutPage() {
             exercise={exercise}
             previous={previous.get(exercise.exercise.key)}
             reduced={draft.readiness?.mode === 'reduced'}
+            active={nextExercise?.id === exercise.id}
             historyStatus={historyStatus}
             onSetChange={(setId, field, value) => updateSet(exercise.id, setId, field, value)}
+            onApplyValues={(setId, values) => applyValues(exercise.id, setId, values)}
             onToggleDone={(set) => toggleDone(exercise.id, set)}
             onAddSet={(warmup) => addSet(exercise.id, warmup)}
             onRemoveSet={(set) => removeSet(exercise.id, set)}
