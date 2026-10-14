@@ -59,15 +59,16 @@ export function WorkoutPage() {
   }, [draft, navigate, template, user])
 
   const exerciseKeys = draft?.exercises.map((exercise) => exercise.exercise.key).join(',')
+  const historyBefore = draft?.startedAt
   useEffect(() => {
-    if (!exerciseKeys || !draft) return
+    if (!exerciseKeys || !historyBefore) return
     let active = true
     setHistoryStatus('loading')
-    void loadPreviousResults(exerciseKeys.split(','), draft.startedAt)
+    void loadPreviousResults(exerciseKeys.split(','), historyBefore)
       .then((results) => { if (active) { setPrevious(results); setHistoryStatus('ready') } })
       .catch(() => { if (active) setHistoryStatus('error') })
     return () => { active = false }
-  }, [exerciseKeys, draft?.startedAt, historyRetry])
+  }, [exerciseKeys, historyBefore, historyRetry])
 
   useEffect(() => {
     if (!draft) return
