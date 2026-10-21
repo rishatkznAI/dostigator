@@ -16,13 +16,13 @@ function CoachHarness() {
 
 describe('guided workout entry', () => {
   afterEach(cleanup)
-  it('shows one editor, records three planned sets in order and asks for effort on every set', () => {
+  it('shows one editor, records three planned sets in order and allows optional effort on every set', () => {
     render(<CoachHarness />)
     expect(screen.getAllByRole('spinbutton')).toHaveLength(2)
     expect(screen.getByText(/Рабочие подходы: 0 из 3/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Как в прошлый раз' }))
     expect(screen.getByRole('spinbutton', { name: /подход 1, вес/ })).toHaveValue(60)
-    expect(screen.getByRole('button', { name: 'Записать подход 1' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Записать подход 1' })).toBeEnabled()
     for (const number of [1, 2, 3]) {
       expect(screen.getByRole('spinbutton', { name: new RegExp(`подход ${number}, вес`) })).toHaveValue(60)
       expect(screen.getByRole('radio', { name: 'RIR 2: Ещё 2' })).not.toBeChecked()
@@ -44,6 +44,12 @@ describe('guided workout entry', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Уменьшить повторы на 1' }))
     expect(screen.getByRole('spinbutton', { name: /подход 1, повторы/ })).toHaveValue(10)
     expect(screen.getByText(/Рабочие подходы: 0 из 3/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: 'RIR 2: Ещё 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Не оценивал RIR' }))
+    expect(screen.getByRole('radio', { name: 'RIR 2: Ещё 2' })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Записать подход 1' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Записать подход 1' }))
+    expect(screen.getByText(/Рабочие подходы: 1 из 3/)).toBeInTheDocument()
   })
 })
 
