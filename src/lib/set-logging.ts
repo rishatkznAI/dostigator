@@ -6,7 +6,8 @@ export type SetEntryValues = Pick<WorkoutSetDraft, 'weightKg' | 'reps'>
 
 export function getNextSetTarget(repTarget: string, last?: WorkoutSetDraft, planned?: SetTarget, reduced = false): SetTarget | undefined {
   const range = parseRepRange(repTarget)
-  if (!last || last.isWarmup || !last.done || last.reps === null || last.rir === null || !range) return planned
+  if (!last || last.isWarmup || !last.done || last.reps === null || !range) return planned
+  if (last.rir === null) return { weightKg: last.weightKg, reps: Math.min(last.reps, range.max), rir: reduced ? 3 : 2, timed: range.timed }
   const difficult = last.rir <= 1 || last.reps < range.min
   const weight = last.weightKg ?? 0
   const step = weight >= 100 ? 5 : weight >= 25 ? 2.5 : 0.5
@@ -18,7 +19,7 @@ export function getNextSetTarget(repTarget: string, last?: WorkoutSetDraft, plan
 
 export function getSetCoachMessage(repTarget: string, last?: WorkoutSetDraft, reduced = false) {
   if (reduced) return 'Облегчённый день: без прибавки веса. Сохрани технику и оставь около 3 повторов в запасе.'
-  if (!last || last.isWarmup || !last.done || last.reps === null || last.rir === null) return 'Выполни подход, затем укажи фактический результат и сколько повторов осталось в запасе.'
+  if (!last || last.isWarmup || !last.done || last.reps === null || last.rir === null) return 'Выполни подход и запиши фактический результат. RIR можно не оценивать; без оценки не увеличивай нагрузку автоматически.'
   const range = parseRepRange(repTarget)
   if (last.rir === 0 || (range && last.reps < range.min)) return last.weightKg ? 'Последний подход дался тяжело. Для следующего снижаем ориентир веса. Если восстановиться не удалось, пропусти подход.' : 'Последний подход дался тяжело. Упрости вариант упражнения или сократи удержание. Если восстановиться не удалось, пропусти подход.'
   if (last.rir === 1) return 'Остался только один повтор в запасе. Не добавляй вес: отдохни, при необходимости снизь нагрузку.'
@@ -44,7 +45,7 @@ export function toggleSetAndPrepareNext(exercise: WorkoutExerciseDraft, setId: s
       const validation = validateWorkoutSetValue(field, current[field])
       if (!validation.valid) throw new Error(validation.message)
     }
-    if (current.reps === null || current.rir === null) throw new Error('Укажи фактический результат и запас повторов')
+    if (current.weightKg === null || current.reps === null) throw new Error('Укажи вес (или 0 кг) и фактический результат')
   }
   const completed = { ...current, done: !current.done, completedAt: current.done ? null : now.toISOString() }
   const next = completed.done && !completed.isWarmup ? exercise.sets.slice(index + 1).find((set) => !set.done && !set.isWarmup) : undefined

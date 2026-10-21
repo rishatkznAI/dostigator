@@ -34,7 +34,7 @@ export function RestTimer({ until, exerciseName, plannedSeconds, onChange, onSki
         <small>план {formatRestDuration(plannedSeconds)}</small>
       </div>
       <button type="button" onClick={() => onChange(until + 30_000)}><Plus size={17} />30 сек</button>
-      <button type="button" onClick={onSkip} aria-label="Пропустить отдых"><SkipForward size={18} /></button>
+      <button type="button" onClick={onSkip} aria-label={seconds === 0 ? 'Продолжить после отдыха' : 'Пропустить отдых'}><SkipForward size={18} />{seconds === 0 ? 'Продолжить' : 'Пропустить отдых'}</button>
     </aside>
   )
 }

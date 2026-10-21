@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronRight, CircleHelp, Plus, RefreshCw, SkipForward, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BottomSheet } from './BottomSheet'
 import { ExerciseTechniqueImage } from './ExerciseTechniqueImage'
 import { WeightGuide } from './WeightGuide'
@@ -16,6 +16,7 @@ type Props = {
   previous?: PreviousResult
   reduced?: boolean
   active?: boolean
+  focusRequest?: number
   historyStatus?: 'loading' | 'ready' | 'error'
   onSetChange: (setId: string, field: 'weightKg' | 'reps' | 'rir', value: number | null) => void
   onApplyValues: (setId: string, values: SetEntryValues) => void
@@ -27,11 +28,12 @@ type Props = {
   alternatives: Exercise[]
 }
 
-export function ExerciseCard({ exercise, previous, reduced = false, active = true, historyStatus = 'ready', onSetChange, onApplyValues, onToggleDone, onAddSet, onRemoveSet, onSkip, onReplace, alternatives }: Props) {
+export function ExerciseCard({ exercise, previous, reduced = false, active = true, focusRequest = 0, historyStatus = 'ready', onSetChange, onApplyValues, onToggleDone, onAddSet, onRemoveSet, onSkip, onReplace, alternatives }: Props) {
   const [instructionsOpen, setInstructionsOpen] = useState(false)
   const [skipOpen, setSkipOpen] = useState(false)
   const [replaceOpen, setReplaceOpen] = useState(false)
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null)
+  useEffect(() => { if (focusRequest) setSelectedSetId(null) }, [focusRequest])
   const recommendation = getWorkoutTargets(exercise.target, exercise.sets.filter((set) => !set.isWarmup).length, previous, reduced)
   const previousSets = previous?.sets.filter((set) => set.done && !set.isWarmup && set.reps !== null) ?? []
   const timed = parseRepRange(exercise.target)?.timed ?? false
@@ -56,7 +58,7 @@ export function ExerciseCard({ exercise, previous, reduced = false, active = tru
 
       {exercise.skipped ? (
         <div className="skipped-exercise">
-          <SkipForward /><div><strong>Упражнение пропущено</strong><span>{exercise.skipReason}</span></div>
+          <SkipForward /><div><strong>Упражнение пропущено</strong><span>{exercise.skipReason}. Записанные подходы сохранены: {completedSets}.</span></div>
           <button type="button" onClick={() => onSkip(null)}>Вернуть</button>
         </div>
       ) : <>
@@ -75,7 +77,7 @@ export function ExerciseCard({ exercise, previous, reduced = false, active = tru
         <small>{historyStatus === 'ready' ? previousSets.length ? `${previousSets.length} рабочих подходов · сравнение ниже` : 'Первая запись станет твоим ориентиром' : 'Пока нельзя определить прошлый результат'}</small>
       </div>
 
-      <p className="rir-explainer">Количество подходов уже задано программой. Записывай их по очереди. Запас выбирай кнопкой после выполнения — вводить его вручную не нужно.</p>
+      <p className="rir-explainer">Количество подходов уже задано программой. Записывай их по очереди. RIR — необязательная оценка запаса после выполнения. Для записи достаточно веса и фактических повторов или времени.</p>
 
       <div className="sets-table">
         {exercise.sets.map((set, index) => {
@@ -89,7 +91,7 @@ export function ExerciseCard({ exercise, previous, reduced = false, active = tru
           const label = set.isWarmup ? 'Разминочный подход' : `Рабочий подход ${workIndex + 1} из ${workingSets.length}`
           return (
             <div className={`set-block ${set.done ? 'recorded' : ''}`} key={set.id}>
-              <div className="set-summary-row"><button type="button" className="set-summary-button" aria-expanded={open} aria-controls={`set-${set.id}`} onClick={() => setSelectedSetId(set.id)}><span className="set-step-mark">{set.done ? <Check size={16} /> : set.isWarmup ? 'Р' : workIndex + 1}</span><span><strong>{label}</strong><small>{set.done ? timed ? `${set.reps} сек · RIR ${set.rir ?? '—'}` : formatSet(set) : open ? 'Выполни и запиши результат' : 'Ожидает выполнения'}</small></span><ChevronDown size={18} /></button><button type="button" className="set-remove" aria-label={`Удалить подход ${set.setNumber}`} onClick={() => onRemoveSet(set)} disabled={exercise.sets.length <= 1}><Trash2 size={17} /></button></div>
+              <div className="set-summary-row"><button type="button" className="set-summary-button" aria-expanded={open} aria-controls={`set-${set.id}`} onClick={() => setSelectedSetId(set.id)}><span className="set-step-mark">{set.done ? <Check size={16} /> : set.isWarmup ? 'Р' : workIndex + 1}</span><span><strong>{label}</strong><small>{set.done ? timed ? `${set.reps} сек · RIR ${set.rir ?? '—'}` : formatSet(set) : set.weightKg !== null || set.reps !== null ? 'Черновик · ещё не записано' : open ? 'Выполни и запиши результат' : 'Ожидает выполнения'}</small></span><ChevronDown size={18} /></button><button type="button" className="set-remove" aria-label={`Удалить подход ${set.setNumber}`} onClick={() => onRemoveSet(set)} disabled={exercise.sets.length <= 1}><Trash2 size={17} /></button></div>
               {open && <div id={`set-${set.id}`}><SetRecorder set={set} exerciseName={exercise.exercise.name} displayNumber={displayNumber} targetText={exercise.target} timed={timed} previous={last} previousInSession={previousInSession} target={target} onChange={(field, value) => onSetChange(set.id, field, value)} onApply={(values) => onApplyValues(set.id, values)} onComplete={() => { onToggleDone(set); setSelectedSetId(null) }} />{set.done && <button type="button" className="text-button undo-set-button" onClick={() => onToggleDone(set)}>Снять отметку выполнения</button>}</div>}
             {status && <p className={`set-feedback ${status === 'Цель выполнена' ? 'achieved' : ''}`} role="status">{status}</p>}
             </div>

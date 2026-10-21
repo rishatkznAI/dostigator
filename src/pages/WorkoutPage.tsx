@@ -32,6 +32,7 @@ export function WorkoutPage() {
   const [alternatives, setAlternatives] = useState<Exercise[]>([])
   const [now, setNow] = useState(0)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(navigator.onLine ? 'local' : 'offline')
+  const [focusRequest, setFocusRequest] = useState(0)
   const [finishOpen, setFinishOpen] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -152,8 +153,8 @@ export function WorkoutPage() {
         }
       }
     }
-    if (!target.done && (target.reps === null || target.rir === null)) {
-      setMessage('Для завершения подхода укажи повторы и RIR')
+    if (!target.done && (target.weightKg === null || target.reps === null)) {
+      setMessage('Для записи укажи вес (или 0 кг) и фактический результат')
       return
     }
     const nextDone = !target.done
@@ -219,7 +220,7 @@ export function WorkoutPage() {
       ...exercise,
       skipped: reason !== null,
       skipReason: reason ?? '',
-      sets: reason === null ? exercise.sets : exercise.sets.map((set) => ({ ...set, done: false, completedAt: null })),
+      sets: exercise.sets,
     }),
   }))
 
@@ -239,7 +240,7 @@ export function WorkoutPage() {
   }
 
   const finishSummary = draftSummary(draft, new Date(now))
-  const nextExercise = draft.exercises.find((exercise) => !exercise.skipped && exercise.sets.some((set) => !set.done && !set.isWarmup))
+  const nextExercise = draft.exercises.find((exercise) => !exercise.skipped && exercise.sets.some((set) => !set.done))
   const nextSet = nextExercise?.sets.find((set) => !set.done)
   const resting = draft.activeRest !== null && draft.activeRest.until > now
   const toggleTimer = () => setDraft((current) => current && toggleWorkoutTimer(current))
@@ -316,11 +317,11 @@ export function WorkoutPage() {
       ) : <>
       {draft.readiness.mode === 'reduced' && <div className="reduced-mode-banner"><strong>Облегчённый режим</strong><span>Сегодня достаточно чистой техники и 2–3 RIR.</span></div>}
       <section className="workout-progress-panel" aria-label="Прогресс тренировки">
-        <div><strong>{finishSummary.sets} / {draft.exercises.filter((exercise) => !exercise.skipped).flatMap((exercise) => exercise.sets).filter((set) => !set.isWarmup).length}</strong><span>рабочих подходов</span></div>
-        <progress aria-label="Выполненные рабочие подходы" value={finishSummary.sets} max={Math.max(1, draft.exercises.filter((exercise) => !exercise.skipped).flatMap((exercise) => exercise.sets).filter((set) => !set.isWarmup).length)} />
+        <div><strong>{finishSummary.sets} / {draft.exercises.flatMap((exercise) => exercise.sets.filter((set) => !exercise.skipped || set.done)).filter((set) => !set.isWarmup).length}</strong><span>рабочих подходов</span></div>
+        <progress aria-label="Выполненные рабочие подходы" value={finishSummary.sets} max={Math.max(1, draft.exercises.flatMap((exercise) => exercise.sets.filter((set) => !exercise.skipped || set.done)).filter((set) => !set.isWarmup).length)} />
         <p>Прошлый результат → цель сегодня → твой факт. Отмечай подход после выполнения.</p>
       </section>
-      <section className="workout-coach-panel" aria-label="Тренер · текущий шаг"><p className="eyebrow">Тренер · текущий шаг</p><h2>{nextExercise ? resting ? 'Сначала восстанови дыхание' : nextExercise.exercise.name : 'Тренировка выполнена'}</h2><p>{nextExercise && nextSet ? `${nextSet.isWarmup ? 'Разминка' : `Рабочий подход ${nextExercise.sets.filter((set) => !set.isWarmup).findIndex((set) => set.id === nextSet.id) + 1} из ${nextExercise.sets.filter((set) => !set.isWarmup).length}`} · ${nextExercise.target}. ${resting ? 'Дождись сигнала таймера отдыха.' : 'Открой подход, проверь ориентир и запиши факт после выполнения.'}` : 'Все запланированные подходы выполнены или упражнения пропущены. Проверь итог и сохрани тренировку.'}</p>{nextExercise && <button type="button" className="primary-button" onClick={() => document.getElementById(`exercise-${nextExercise.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>К текущему упражнению</button>}</section>
+      <section className="workout-coach-panel" aria-label="Тренер · текущий шаг"><p className="eyebrow">Тренер · текущий шаг</p><h2>{nextExercise ? resting ? 'Сначала восстанови дыхание' : nextExercise.exercise.name : 'Тренировка выполнена'}</h2><p>{nextExercise && nextSet ? `${nextSet.isWarmup ? 'Разминка' : `Рабочий подход ${nextExercise.sets.filter((set) => !set.isWarmup).findIndex((set) => set.id === nextSet.id) + 1} из ${nextExercise.sets.filter((set) => !set.isWarmup).length}`} · ${nextExercise.target}. ${resting ? `Дождись сигнала таймера отдыха. Затем: ${nextExercise.exercise.name}, ${nextSet.isWarmup ? 'разминка' : 'следующий рабочий подход'}.` : 'Сейчас: выполни подход и нажми «Записать подход». Затем: отдых.'}` : 'Все запланированные подходы выполнены или упражнения пропущены. Проверь итог и сохрани тренировку.'}</p>{nextExercise && <button type="button" className="primary-button" onClick={() => { setFocusRequest((value) => value + 1); document.getElementById(`exercise-${nextExercise.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>К текущему упражнению</button>}</section>
       {historyStatus === 'error' && <button className="error-card" type="button" onClick={() => setHistoryRetry((value) => value + 1)}>Не удалось загрузить прошлые результаты. Нажми, чтобы повторить.</button>}
       <div className="exercise-list">
         {draft.exercises.map((exercise) => (
@@ -330,6 +331,7 @@ export function WorkoutPage() {
             previous={previous.get(exercise.exercise.key)}
             reduced={draft.readiness?.mode === 'reduced'}
             active={nextExercise?.id === exercise.id}
+            focusRequest={nextExercise?.id === exercise.id ? focusRequest : 0}
             historyStatus={historyStatus}
             onSetChange={(setId, field, value) => updateSet(exercise.id, setId, field, value)}
             onApplyValues={(setId, values) => applyValues(exercise.id, setId, values)}
@@ -347,8 +349,8 @@ export function WorkoutPage() {
 
       <section className="finish-panel">
         <Flag />
-        <div><strong>Все подходы готовы?</strong><span>Проверь результат перед сохранением.</span></div>
-        <button className="primary-button" type="button" onClick={() => setFinishOpen(true)} disabled={finishSummary.sets === 0}>Завершить</button>
+        <div><strong>Проверить итог тренировки</strong><span>Проверь результат перед сохранением.</span></div>
+        <button className="primary-button" type="button" onClick={() => setFinishOpen(true)} disabled={finishSummary.sets === 0}>Перейти к итогу</button>
       </section>
       </>}
 
@@ -373,6 +375,7 @@ export function WorkoutPage() {
               <span><strong>{finishSummary.sets}</strong> подходов</span>
               <span><strong>{formatNumber(finishSummary.volume)}</strong> кг</span>
             </div>
+            <button className="text-button" type="button" onClick={() => setFinishOpen(false)} disabled={finishing}>Вернуться к тренировке</button>
             <p className="muted">Если сеть пропадёт, результат останется на телефоне и синхронизируется позже без дублей.</p>
             {draft.exercises.flatMap((exercise) => exercise.skipped ? [] : exercise.sets).filter((set) => !set.isWarmup && !set.done).length > 0 && (
               <p className="finish-warning">Не завершено рабочих подходов: {draft.exercises.flatMap((exercise) => exercise.skipped ? [] : exercise.sets).filter((set) => !set.isWarmup && !set.done).length}. Можно вернуться или сохранить неполную тренировку.</p>

@@ -46,8 +46,8 @@ export function workoutDraftValidationError(draft: WorkoutDraft): string | null 
         const result = validateWorkoutSetValue(field, set[field])
         if (!result.valid) return `${exercise.exercise.name}, подход ${set.setNumber}: ${result.message}`
       }
-      if (set.done && (set.reps === null || set.rir === null)) {
-        return `${exercise.exercise.name}, подход ${set.setNumber}: укажите повторы и RIR`
+      if (set.done && (set.weightKg === null || set.reps === null)) {
+        return `${exercise.exercise.name}, подход ${set.setNumber}: укажите вес (или 0 кг) и фактический результат`
       }
     }
   }

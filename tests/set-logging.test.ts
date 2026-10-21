@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applySetEntry, getNextSetTarget, getSetCoachMessage, toggleSetAndPrepareNext } from '../src/lib/set-logging'
-import { createWorkoutDraft } from '../src/lib/workout'
+import { createWorkoutDraft, workoutDraftValidationError } from '../src/lib/workout'
 import type { WorkoutExerciseDraft, WorkoutSetDraft, WorkoutTemplate } from '../src/types/training'
 
 const set = (id: string, overrides: Partial<WorkoutSetDraft> = {}): WorkoutSetDraft => ({ id, setNumber: Number(id), weightKg: null, reps: null, rir: null, done: false, isWarmup: false, completedAt: null, ...overrides })
@@ -39,7 +39,7 @@ describe('coach set logging', () => {
     expect(getNextSetTarget('30–60 сек', set('1', { done: true, weightKg: 0, reps: 40, rir: 4 }))).toMatchObject({ weightKg: 0, reps: 45, timed: true })
     expect(getNextSetTarget('30–60 сек', set('1', { done: true, weightKg: 0, reps: 40, rir: 0 }))).toMatchObject({ weightKg: 0, reps: 35, rir: 3 })
     expect(getSetCoachMessage('8–12', set('1', { done: true, weightKg: 60, reps: 12, rir: 4 }))).toContain('Верх диапазона')
-    expect(() => toggleSetAndPrepareNext(exercise(set('1', { reps: 10 })), '1', false)).toThrow('запас')
+    expect(() => toggleSetAndPrepareNext(exercise(set('1', { reps: 10 })), '1', false)).toThrow('вес')
     expect(() => applySetEntry(exercise(set('1')), '1', { weightKg: 55.25, reps: 10 })).toThrow('Вес')
   })
   it('quick filling and undo do not manufacture completed sets', () => {
@@ -50,5 +50,21 @@ describe('coach set logging', () => {
     const undone = toggleSetAndPrepareNext(complete, '1', false)
     expect(undone.sets[0]).toMatchObject({ done: false, completedAt: null })
     expect(undone.sets[1]).toEqual(complete.sets[1])
+  })
+})
+
+describe('optional RIR contract', () => {
+  it('records null RIR, prepares an uncompleted next draft without raising load', () => {
+    const recorded = toggleSetAndPrepareNext(exercise(set('1', { weightKg: 60, reps: 10 }), set('2')), '1', false)
+    expect(recorded.sets[0]).toMatchObject({ done: true, rir: null })
+    expect(recorded.sets[0]?.completedAt).toBeTruthy()
+    expect(recorded.sets[1]).toMatchObject({ weightKg: 60, reps: 10, rir: null, done: false, completedAt: null })
+    expect(workoutDraftValidationError({ exercises: [recorded] } as Parameters<typeof workoutDraftValidationError>[0])).toBeNull()
+  })
+  it('still rejects invalid explicit RIR and missing or invalid actual values', () => {
+    for (const values of [{ weightKg: null, reps: 10 }, { weightKg: 0, reps: null }, { weightKg: 0, reps: 0 }, { weightKg: 0, reps: 10, rir: 6 }]) {
+      expect(() => toggleSetAndPrepareNext(exercise(set('1', values)), '1', false)).toThrow()
+    }
+    expect(toggleSetAndPrepareNext(exercise(set('1', { weightKg: 0, reps: 40 })), '1', false).sets[0]?.done).toBe(true)
   })
 })
