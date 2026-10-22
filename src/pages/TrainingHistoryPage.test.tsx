@@ -21,6 +21,12 @@ vi.mock('../context/AuthContext', () => ({
 vi.mock('../lib/trainingRepository', () => ({
   loadHistory: mocks.loadHistory,
 }))
+// The page also refreshes linked cardio. Keep that external request isolated
+// when CI provides real Supabase credentials to the separate API suite.
+vi.mock('../lib/cardio', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../lib/cardio')>(),
+  loadCardio: vi.fn().mockResolvedValue([]),
+}))
 vi.mock('../lib/storage', () => ({
   getSyncQueue: vi.fn(() => []),
 }))
