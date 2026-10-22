@@ -27,3 +27,6 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Isolated compiler and preview caches
+.cache/

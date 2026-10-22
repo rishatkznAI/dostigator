@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTemplates } from '../hooks/useTemplates'
 import { loadHistory, loadMeasurements } from '../lib/trainingRepository'
-import { getActiveDraft } from '../lib/storage'
+import { cachedTrainingHistory,cacheTrainingHistory,mergeTrainingHistory } from '../lib/training-insights'
+import { getSyncQueue,getActiveDraft } from '../lib/storage'
 import { formatNumber, getCompletedTemplateCodesThisWeek, getNextMandatoryWorkout, getWeeklyStats, historySummary } from '../lib/workout'
 import type { BodyMeasurement, HistoryWorkout } from '../types/training'
 
@@ -17,11 +18,12 @@ const formatDelta = (current: number | null, previous: number | null, unit: stri
 const scheduleByCode: Record<string, string> = {
   A: 'Понедельник · основная',
   B: 'Среда · основная',
-  C: 'Суббота · дополнительная',
+  C: 'Суббота · по желанию',
 }
 
 export function TrainingPage() {
   const { user, signOut } = useAuth()
+  const userId=user?.id
   const { templates, loading: templatesLoading, error: templatesError, refresh } = useTemplates()
   const [history, setHistory] = useState<HistoryWorkout[]>([])
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([])
@@ -32,14 +34,16 @@ export function TrainingPage() {
   const loadDashboard = useCallback(() => {
     setLoading(true)
     setDataError(null)
+    if(!navigator.onLine && userId) {setHistory(mergeTrainingHistory(cachedTrainingHistory(userId),getSyncQueue(userId)));setLoading(false);return Promise.resolve()}
     return Promise.all([loadHistory(), loadMeasurements()])
       .then(([nextHistory, nextMeasurements]) => {
-        setHistory(nextHistory)
+        if(userId)cacheTrainingHistory(userId,nextHistory)
+        setHistory(userId?mergeTrainingHistory(nextHistory,getSyncQueue(userId)):nextHistory)
         setMeasurements(nextMeasurements)
       })
       .catch((reason: Error) => setDataError(reason.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [userId])
 
   useEffect(() => void loadDashboard(), [loadDashboard])
 
@@ -69,17 +73,17 @@ export function TrainingPage() {
       <nav className="training-shortcuts" aria-label="Разделы TrainLog">
         <Link to="/training/history"><History /><span>История</span></Link>
         <Link to="/nutrition"><Utensils /><span>Питание</span></Link>
-        <Link to="/training/progress"><Activity /><span>Прогресс</span></Link>
+        <Link to="/training/progress" aria-label="Прогресс тренировок"><Activity /><span>Прогресс в зале</span></Link>
         <Link to="/training/body"><Ruler /><span>Замеры</span></Link>
       </nav>
 
       <section className="week-card">
         <div className="week-card-heading">
           <div>
-            <span>Текущая неделя</span>
+            <span>Текущая неделя · цель A и B</span>
             <strong>{stats.workouts} {stats.workouts === 1 ? 'тренировка' : 'тренировки'}</strong>
           </div>
-          <div className="week-ring"><span>{Math.min(stats.workouts, 3)}</span>/3</div>
+          <div className="week-ring"><span>{['A','B'].filter(code=>completedThisWeek.has(code)).length}</span>/2</div>
         </div>
         <div className="stats-grid">
           <div><strong>{stats.sets}</strong><span>рабочих подходов</span></div>
@@ -113,7 +117,7 @@ export function TrainingPage() {
 
       <section className="section-block">
         <div className="section-heading">
-          <div><p className="eyebrow">Твоя программа</p><h2>Начать тренировку</h2></div>
+          <div><p className="eyebrow">Твоя программа</p><h2>Начать тренировку</h2>{templates.some(t=>t.programRevision) && <p>V2.1 активна · 2 обязательные тренировки в неделю: A и B. C — по желанию.</p>}</div>
           {!navigator.onLine && <span className="offline-pill"><CloudOff size={14} /> офлайн</span>}
         </div>
 
@@ -124,7 +128,7 @@ export function TrainingPage() {
         )}
         <div className="template-list" aria-busy={templatesLoading}>
           {templates.map((template) => {
-            const recommended = template.code === nextMandatory
+            const recommended = template.code === nextMandatory && !completedThisWeek.has(template.code)
             const completed = completedThisWeek.has(template.code)
             const lastWorkout = history.find((workout) => workout.templateCode === template.code)
             return (
@@ -135,7 +139,7 @@ export function TrainingPage() {
                 <p>{template.title}</p>
                 <div className="template-meta">
                   <span>{scheduleByCode[template.code] ?? 'По плану'}</span>
-                  <span>{template.items.length} упражнений · {template.items.reduce((sum, item) => sum + item.setCount, 0)} подходов</span>
+                  <span>{template.programRevision && template.code === "C" ? "30–45 минут умеренного кардио · силовая по желанию" : `${template.items.length} упражнений · ${template.items.reduce((sum, item) => sum + item.setCount, 0)} подходов`}</span>
                 </div>
                 {lastWorkout && <div className="template-last-result">Прошлый раз · {new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(lastWorkout.finishedAt))} · {historySummary(lastWorkout).sets} рабочих подходов</div>}
               </div>
@@ -151,7 +155,7 @@ export function TrainingPage() {
           <div>
             <span>Кардио</span>
             <strong>Записать кардио и заметку</strong>
-            <small>Прошлый результат, время, дистанция и самочувствие</small>
+            <small>Таймер или ручная запись · достаточно времени</small>
           </div>
           <ArrowRight />
         </Link>

@@ -1,3 +1,4 @@
+import { v21TechniqueImages } from './v21-technique-images'
 export type ExerciseMedia = {
   src: string
   alt: string
@@ -32,6 +33,7 @@ const exercisePhaseLabels: Partial<Record<keyof typeof EXERCISE_IMAGE_FILES, rea
 }
 
 export function getExerciseMedia(key: string, name: string): ExerciseMedia | null {
+  if (v21TechniqueImages[key]) return { src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(v21TechniqueImages[key])}`, alt: `Схема техники «${name}»: два положения; подробности в инструкции ниже`, phaseLabels: ['Настройка', 'Движение под контролем'] }
   const file = EXERCISE_IMAGE_FILES[key as keyof typeof EXERCISE_IMAGE_FILES]
   const src = EXERCISE_IMAGE_DATA[key]
   if (!file || !src) return null

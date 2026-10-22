@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createWorkoutDraft, draftSummary, elapsedClock, finishWorkoutTimer, getOverloadRecommendation, getWeeklyStats, parseRepRange, toggleWorkoutTimer, validateWorkoutSetValue, workoutDraftValidationError } from '../src/lib/workout'
+import { createWorkoutDraft, draftSummary, elapsedClock, finishWorkoutTimer, getWeeklyStats, parseRepRange, toggleWorkoutTimer, validateWorkoutSetValue, workoutDraftValidationError } from '../src/lib/workout'
+import { getWorkoutTargets } from '../src/lib/workout-targets'
 import type { HistoryWorkout, PreviousResult, WorkoutDraft, WorkoutTemplate } from '../src/types/training'
 
 const result = (sets: PreviousResult['sets']): PreviousResult => ({
@@ -26,31 +27,40 @@ describe('deterministic progressive overload', () => {
     expect(parseRepRange('30–60 сек')).toEqual({ min: 30, max: 60, timed: true })
   })
 
-  it('increases load only when every set reaches the top with RIR >= 1', () => {
-    const recommendation = getOverloadRecommendation('8–12', result([set(12, 1, 70, 1), set(12, 2, 70, 2), set(12, 1, 70, 3)]))
+  it('offers a first-set weight increase only when all planned sets reach the top with reserve', () => {
+    const history = result([set(12, 2, 70, 1), set(12, 2, 70, 2), set(12, 2, 70, 3)]); history.earlier = { ...history }
+    const recommendation = getWorkoutTargets('8–12', 3, history, false, { weightStep: 2.5 })
     expect(recommendation.mode).toBe('increase')
-    expect(recommendation.message).toContain('72,5 кг')
+    expect(recommendation.targets[0]?.weightKg).toBe(72.5)
+    expect(recommendation.targets[1]?.weightKg).toBe(72.5)
   })
 
   it('keeps load and adds repetitions inside the target range', () => {
-    const recommendation = getOverloadRecommendation('8–12', result([set(10, 2, 70, 1), set(9, 2, 70, 2), set(8, 1, 70, 3)]))
-    expect(recommendation.mode).toBe('reps')
-    expect(recommendation.message).toContain('добавь 1 повтор')
+    const recommendation = getWorkoutTargets('8–12', 3, result([set(10, 2, 70, 1), set(9, 2, 70, 2), set(8, 1, 70, 3)]))
+    expect(recommendation.mode).toBe('recover')
+    expect(recommendation.targets.map((target) => target.reps)).toEqual([10, 9, 8])
   })
 
   it('prioritizes recovery when a set misses the range or reaches RIR 0', () => {
-    expect(getOverloadRecommendation('8–12', result([set(7, 0)])).mode).toBe('recover')
+    expect(getWorkoutTargets('8–12', 1, result([set(7, 0)])).mode).toBe('recover')
   })
 })
 
 describe('workout draft and weekly metrics', () => {
+  it('preserves legacy completed bodyweight records with null weight and optional reserve', () => {
+    const template: WorkoutTemplate = { code: 'A', title: 'A', sortOrder: 1, items: [{ sortOrder: 1, setCount: 1, repTarget: '8–12', exercise: { key: 'x', name: 'Свой вес', muscles: [], steps: [], mistakes: [], youtube_url: null } }] }
+    const draft = createWorkoutDraft(template, 'owner')
+    draft.exercises[0]!.sets[0] = { ...draft.exercises[0]!.sets[0]!, reps: 10, weightKg: null, rir: null, done: true }
+    expect(workoutDraftValidationError(draft)).toBeNull()
+  })
   it('accepts only sync-safe set values inside the UI and database bounds', () => {
     expect(validateWorkoutSetValue('weightKg', 72.5)).toEqual({ valid: true, value: 72.5 })
     expect(validateWorkoutSetValue('reps', 12)).toEqual({ valid: true, value: 12 })
     expect(validateWorkoutSetValue('rir', 0)).toEqual({ valid: true, value: 0 })
     expect(validateWorkoutSetValue('rir', 5)).toEqual({ valid: true, value: 5 })
 
-    expect(validateWorkoutSetValue('weightKg', 72.25)).toMatchObject({ valid: false })
+    expect(validateWorkoutSetValue('weightKg', 72.25)).toMatchObject({ valid: true })
+    expect(validateWorkoutSetValue('weightKg', 72.13)).toMatchObject({ valid: false })
     expect(validateWorkoutSetValue('weightKg', 2001)).toMatchObject({ valid: false })
     expect(validateWorkoutSetValue('reps', -1)).toMatchObject({ valid: false })
     expect(validateWorkoutSetValue('reps', 10.5)).toMatchObject({ valid: false })

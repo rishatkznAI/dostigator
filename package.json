@@ -14,8 +14,10 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:postgres": "node tests/postgres/history.integration.mjs",
-    "test:all": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:postgres && pnpm build",
-    "preview": "vite preview"
+    "test:all": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:proposal && pnpm test:postgres && pnpm build",
+    "preview": "vite preview",
+    "dev:local": "vite --config tests/local-browser/vite.config.mjs",
+    "test:proposal": "node --test proposals/program-v2/model.test.mjs proposals/program-v2/local-integration.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

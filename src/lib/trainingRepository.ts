@@ -1,22 +1,20 @@
 import { supabase } from './supabase'
-import { cacheTemplates, getCachedTemplates } from './storage'
 import type {
   BodyMeasurement,
   DailyActivity,
-  Exercise,
   HistoryWorkout,
   NutritionEntry,
   PersonalBackup,
   PreviousResult,
   WorkoutDraft,
   WorkoutSetDraft,
-  WorkoutTemplate,
   WeeklyReportData,
   WeeklyWorkoutSummary,
 } from '../types/training'
 import type { TableRow } from '../types/trainingDatabase'
 import { historySummary } from './workout'
 import { selectPreviousResults } from './workout-targets'
+import { storeWorkoutConflict } from './workout-conflicts'
 
 type QueryError = { message: string }
 
@@ -24,49 +22,7 @@ const fail = (context: string, error: QueryError | null) => {
   if (error) throw new Error(`${context}: ${error.message}`)
 }
 
-export async function loadTemplates(): Promise<WorkoutTemplate[]> {
-  const [templatesResult, itemsResult, libraryResult] = await Promise.all([
-    supabase.from('workout_templates').select('*').eq('active', true).order('sort_order'),
-    supabase.from('workout_template_items').select('*').order('sort_order'),
-    supabase.from('exercise_library').select('*').eq('active', true),
-  ])
-
-  const error = templatesResult.error ?? itemsResult.error ?? libraryResult.error
-  if (error) {
-    const cached = getCachedTemplates()
-    if (cached.length) return cached
-    fail('Не удалось загрузить программу', error)
-  }
-
-  const exercises = new Map((libraryResult.data ?? []).map((exercise) => [exercise.key, exercise]))
-  const result = (templatesResult.data ?? []).map<WorkoutTemplate>((template) => ({
-    code: template.code,
-    title: template.title,
-    sortOrder: template.sort_order,
-    items: (itemsResult.data ?? [])
-      .filter((item) => item.template_code === template.code)
-      .map((item) => {
-        const exercise = exercises.get(item.exercise_key)
-        if (!exercise) throw new Error(`Упражнение ${item.exercise_key} отсутствует в exercise_library`)
-        return {
-          sortOrder: item.sort_order,
-          setCount: item.set_count,
-          repTarget: item.rep_target,
-          exercise: {
-            key: exercise.key,
-            name: exercise.name,
-            muscles: exercise.muscles,
-            steps: exercise.steps,
-            mistakes: exercise.mistakes,
-            youtube_url: exercise.youtube_url,
-          },
-        }
-      }),
-  }))
-
-  cacheTemplates(result)
-  return result
-}
+export { loadTemplates, loadExerciseLibrary } from './training-program'
 
 const mapSet = (set: TableRow<'workout_sets'>): WorkoutSetDraft => ({
   id: set.id,
@@ -78,19 +34,6 @@ const mapSet = (set: TableRow<'workout_sets'>): WorkoutSetDraft => ({
   isWarmup: set.is_warmup,
   completedAt: set.completed_at,
 })
-
-export async function loadExerciseLibrary(): Promise<Exercise[]> {
-  const result = await supabase.from('exercise_library').select('*').eq('active', true).order('name')
-  fail('Не удалось загрузить библиотеку упражнений', result.error)
-  return (result.data ?? []).map((exercise) => ({
-    key: exercise.key,
-    name: exercise.name,
-    muscles: exercise.muscles,
-    steps: exercise.steps,
-    mistakes: exercise.mistakes,
-    youtube_url: exercise.youtube_url,
-  }))
-}
 
 export async function loadHistory(limit = 100): Promise<HistoryWorkout[]> {
   const sessionsResult = await supabase
@@ -152,27 +95,16 @@ export async function loadPreviousResults(exerciseKeys: string[], before?: strin
 }
 
 export async function syncWorkoutDraft(draft: WorkoutDraft): Promise<void> {
-  const sessionResult = await supabase.from('workout_sessions').upsert(
-    {
-      id: draft.id,
-      template_code: draft.templateCode,
-      title: draft.title,
-      started_at: draft.startedAt,
-      finished_at: draft.finishedAt,
-      timer_paused_at: draft.timerPausedAt,
-      timer_paused_duration_ms: draft.timerPausedDurationMs,
-      readiness_sleep: draft.readiness?.sleep ?? null,
-      readiness_energy: draft.readiness?.energy ?? null,
-      readiness_stress: draft.readiness?.stress ?? null,
-      readiness_discomfort: draft.readiness?.discomfort ?? false,
-      readiness_mode: draft.readiness?.mode ?? null,
-      readiness_note: draft.readiness?.note ?? '',
-      updated_at: draft.updatedAt,
-    },
-    { onConflict: 'id' },
-  )
-  fail('Не удалось синхронизировать тренировку', sessionResult.error)
-
+  const cloudKey = `trainlog:workout-cloud:${draft.userId}:${draft.id}`
+  const state = JSON.parse(localStorage.getItem(cloudKey) ?? '{}') as {revision?:number;updatedAt?:string;legacyUpdatedAt?:string;finishedAt?:string|null;request?:{stamp:string;mutation:string;revision:number;payload:Record<string,unknown>}}
+  if (state.updatedAt && Date.parse(draft.updatedAt)<=Date.parse(state.updatedAt)) return
+  if (state.finishedAt) throw new Error('Тренировка уже завершена на сервере. Локальный ввод сохранён.')
+  const session = {
+    id:draft.id,template_code:draft.templateCode,title:draft.title,started_at:draft.startedAt,finished_at:draft.finishedAt,legacy_updated_at:state.legacyUpdatedAt??null,
+    timer_paused_at:draft.timerPausedAt,timer_paused_duration_ms:draft.timerPausedDurationMs,
+    readiness_sleep:draft.readiness?.sleep??null,readiness_energy:draft.readiness?.energy??null,readiness_stress:draft.readiness?.stress??null,
+    readiness_discomfort:draft.readiness?.discomfort??false,readiness_mode:draft.readiness?.mode??null,readiness_note:draft.readiness?.note??'',note:'',
+  }
   const exerciseRows = draft.exercises.map((exercise) => ({
     id: exercise.id,
     session_id: draft.id,
@@ -183,11 +115,6 @@ export async function syncWorkoutDraft(draft: WorkoutDraft): Promise<void> {
     skipped: exercise.skipped,
     skip_reason: exercise.skipReason,
   }))
-  const exerciseResult = await supabase
-    .from('workout_session_exercises')
-    .upsert(exerciseRows, { onConflict: 'id' })
-  fail('Не удалось синхронизировать упражнения', exerciseResult.error)
-
   const setRows = draft.exercises.flatMap((exercise) =>
     exercise.sets.map((set) => ({
       id: set.id,
@@ -202,19 +129,30 @@ export async function syncWorkoutDraft(draft: WorkoutDraft): Promise<void> {
       completed_at: set.completedAt,
     })),
   )
-  if (setRows.length) {
-    const setsResult = await supabase.from('workout_sets').upsert(setRows, { onConflict: 'id' })
-    fail('Не удалось синхронизировать подходы', setsResult.error)
+  // Persist the exact request before network IO so timeout-after-commit can be replayed.
+  const request = state.request ?? {stamp:draft.updatedAt,mutation:crypto.randomUUID(),revision:state.revision??0,
+    payload:{p_session:session,p_exercises:exerciseRows,p_sets:setRows,p_deleted_set_ids:draft.deletedSetIds}}
+  localStorage.setItem(cloudKey,JSON.stringify({...state,request}))
+  const {data,error} = await supabase.rpc('training_save_workout',{...request.payload,p_mutation_id:request.mutation,p_expected_revision:request.revision})
+  if(error) {
+    if(error.code==='40001') storeWorkoutConflict(draft,error.details)
+    throw new Error(error.code==='40001'?'Тренировка изменилась на сервере. Локальный ввод сохранён; сравни версии перед повтором.':`Не удалось синхронизировать тренировку: ${error.message}`)
   }
-  if (draft.deletedSetIds.length) {
-    const deletedResult = await supabase.from('workout_sets').delete().in('id', draft.deletedSetIds)
-    fail('Не удалось удалить подход', deletedResult.error)
-  }
+  if(!data || data.id!==draft.id || !data.revision) throw new Error('Сервер не подтвердил тренировку')
+  localStorage.setItem(cloudKey,JSON.stringify({revision:data.revision,updatedAt:request.stamp,finishedAt:data.finished_at}))
+  if(request.stamp!==draft.updatedAt) await syncWorkoutDraft(draft)
+
 }
 
 export async function deleteWorkoutSession(id: string): Promise<void> {
-  const result = await supabase.from('workout_sessions').delete().eq('id', id)
-  fail('Не удалось отменить тренировку', result.error)
+  const auth=await supabase.auth.getUser()
+  const owner=auth.data.user?.id
+  if(!owner) throw new Error('Требуется вход в аккаунт')
+  const state=JSON.parse(localStorage.getItem(`trainlog:workout-cloud:${owner}:${id}`)??'{}')
+  const key=`trainlog:workout-cancel:${owner}:${id}`
+  const mutation=localStorage.getItem(key)??crypto.randomUUID();localStorage.setItem(key,mutation)
+  const result=await supabase.rpc('training_cancel_workout',{p_id:id,p_mutation_id:mutation,p_expected_revision:state.revision??0})
+  fail('Не удалось отменить тренировку',result.error)
 }
 
 export async function loadMeasurements(): Promise<BodyMeasurement[]> {

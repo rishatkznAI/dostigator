@@ -49,3 +49,23 @@ describe('workout sync ordering', () => {
     expect(sync.mock.calls.map(([value]) => value.id)).toEqual(['old', 'final'])
   })
 })
+
+it('serializes the same UUID across foreground and background writers, and rejects late active snapshots after completion',async()=>{
+ const first=deferred();const calls:string[]=[]
+ const sync=vi.fn((value:WorkoutDraft)=>{calls.push(value.finishedAt?'finished':'active');return calls.length===1?first.promise:Promise.resolve()})
+ const page=createWorkoutSyncQueue(sync),background=createWorkoutSyncQueue(sync)
+ const active={...draft('same-session'),userId:'same-owner',finishedAt:null}
+ const a=page.enqueue(active);await Promise.resolve();expect(calls).toEqual(['active'])
+ const completed=background.enqueue({...active,finishedAt:'2026-10-21T10:00:00Z'})
+ const stale=page.enqueue(active)
+ expect(calls).toEqual(['active']);first.resolve();await Promise.all([a,completed,stale])
+ expect(calls).toEqual(['active','finished'])
+})
+
+it('a hung session does not prevent a different editor from syncing a different UUID',async()=>{
+ const first=deferred();const sync=vi.fn((value:WorkoutDraft)=>value.id==='hung'?first.promise:Promise.resolve())
+ const one=createWorkoutSyncQueue(sync),two=createWorkoutSyncQueue(sync)
+ const pending=one.enqueue({...draft('hung'),userId:'owner'});await Promise.resolve()
+ await expect(two.enqueue({...draft('other'),userId:'owner'})).resolves.toBeUndefined()
+ first.resolve();await pending
+})

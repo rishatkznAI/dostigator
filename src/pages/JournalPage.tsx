@@ -5,6 +5,8 @@ import { useData } from '../context/DataContext'
 import { localDate, shiftDate } from '../lib/date'
 import type { JournalEntry, JournalEntryType } from '../types'
 
+const noJournals: JournalEntry[] = []
+
 type JournalFilter = JournalEntryType | 'all'
 type Notice = { kind: 'success' | 'error'; text: string }
 
@@ -40,7 +42,7 @@ export function JournalPage() {
     updateJournalEntry,
     deleteJournalEntry,
   } = useData()
-  const journals = data.journals ?? []
+  const journals = data.journals ?? noJournals
 
   const [typeFilter, setTypeFilter] = useState<JournalFilter>('all')
   const [dateFilter, setDateFilter] = useState('all')
