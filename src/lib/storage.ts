@@ -90,3 +90,8 @@ export const cacheTemplates = (templates: WorkoutTemplate[]) =>
   localStorage.setItem(TEMPLATE_CACHE, JSON.stringify(templates))
 
 export const getCachedTemplates = () => parse<WorkoutTemplate[]>(localStorage.getItem(TEMPLATE_CACHE), [])
+
+/** Retain the facts even after an explicit cancellation, without putting them back in the sync queue. */
+export function archiveCancelledDraft(draft: WorkoutDraft) {
+  localStorage.setItem(`trainlog:cancelled-draft:${draft.userId}:${draft.id}`, JSON.stringify(draft))
+}

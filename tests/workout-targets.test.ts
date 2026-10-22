@@ -50,3 +50,10 @@ describe('per-set workout targets', () => {
     expect(getWorkoutTargets('8–12', 3, selected).targets[2]?.weightKg).toBe(40)
   })
 })
+it('uses the new A/B rep range without rewriting the prior facts or increasing weight',()=>{
+ const history={...previous([set(20,8),set(20,12),set(20,14)]),target:'8–12'}
+ const before=structuredClone(history)
+ const result=getWorkoutTargets('10–12',3,history)
+ expect(result.targets.map(s=>[s.weightKg,s.reps])).toEqual([[20,10],[20,12],[20,12]])
+ expect(history).toEqual(before);expect(result.mode).toBe('repeat')
+})

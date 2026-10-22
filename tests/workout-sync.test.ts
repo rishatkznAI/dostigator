@@ -69,3 +69,18 @@ it('a hung session does not prevent a different editor from syncing a different 
  await expect(two.enqueue({...draft('other'),userId:'owner'})).resolves.toBeUndefined()
  first.resolve();await pending
 })
+it('serializes cancellation and blocks late writes in other editors',async()=>{
+ const first=deferred();const sync=vi.fn(()=>first.promise);const cancel=vi.fn(async()=>undefined)
+ const page=createWorkoutSyncQueue(sync),background=createWorkoutSyncQueue(sync)
+ const value={...draft('cancel-me'),userId:'owner'}
+ const saving=page.enqueue(value);await Promise.resolve()
+ const cancelling=background.cancel('owner',value.id,cancel)
+ const stale=page.enqueue(value);void stale.catch(()=>undefined)
+ expect(cancel).not.toHaveBeenCalled();first.resolve();await saving;await cancelling
+ await expect(stale).rejects.toThrow('отмены');expect(cancel).toHaveBeenCalledOnce();expect(sync).toHaveBeenCalledOnce()
+})
+it('allows the retained draft to retry when cancellation fails',async()=>{
+ const sync=vi.fn(async()=>undefined),queue=createWorkoutSyncQueue(sync)
+ await expect(queue.cancel('owner','session',async()=>{throw new Error('server unavailable')})).rejects.toThrow()
+ await queue.enqueue({...draft('session'),userId:'owner'});expect(sync).toHaveBeenCalledOnce()
+})

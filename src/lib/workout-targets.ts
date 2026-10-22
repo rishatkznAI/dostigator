@@ -31,7 +31,7 @@ export function getWorkoutTargets(target: string, plannedSets: number, previous?
   })
   const repeat = (message: string, mode = 'repeat') => ({ mode, message, targets })
   if (reduced) return repeat('Облегчённый режим: повтори или уменьши нагрузку, без прибавки.', 'recover')
-  if (previous?.target && previous.target !== target) return repeat('Диапазон программы изменился. Прошлый факт показан без прибавки.')
+  if (previous?.target && previous.target !== target) return { mode: 'repeat', message: 'Диапазон программы изменился. Вес без прибавки; повторы плана — в текущем диапазоне. Прошлый факт сохранён.', targets: targets.map(set => ({ ...set, reps: Math.max(range.min, Math.min(range.max, set.reps)) })) }
   if (previous?.readinessMode === 'reduced') return repeat('Прошлое занятие было в облегчённом режиме. Пока без прибавки.')
   if (options.today && (Date.parse(options.today) - Date.parse(previous!.finishedAt)) / 86400000 >= 14) return repeat('С последнего занятия прошло 14 дней или больше. Повтори прошлый факт и оцени новый результат.')
   if (work.length !== plannedSets || sets.length !== plannedSets) return repeat('В прошлый раз выполнены не все рабочие подходы. Повтори план без прибавки.')
@@ -60,7 +60,7 @@ export function getWorkoutTargets(target: string, plannedSets: number, previous?
 }
 
 export function formatSetTarget(target: SetTarget) {
-  return target.timed ? `${target.reps} сек` : `${target.weightKg===null ? 'Вес не задан' : target.weightKg ? `${formatNumber(target.weightKg)} кг` : 'свой вес'} × ${target.reps}`
+  return target.timed ? `${target.reps} сек` : `${target.weightKg===null ? 'Вес не задан' : target.weightKg ? `${formatNumber(target.weightKg)} кг` : 'без доп. веса'} × ${target.reps}`
 }
 
 export function getSetTargetStatus(set: WorkoutSetDraft, target?: SetTarget) {

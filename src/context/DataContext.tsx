@@ -401,6 +401,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .finally(() => { if (activeUserId.current === user.id) setSyncing(false) })
     }
     const markOffline = () => setOnline(false)
+    const resume = () => { if (navigator.onLine && document.visibilityState === 'visible') sync() }
+    window.addEventListener('focus', resume)
+    document.addEventListener('visibilitychange', resume)
     window.addEventListener('online', sync)
     window.addEventListener('offline', markOffline)
     window.addEventListener('dostigator:queue', updateSyncState)
@@ -408,6 +411,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (navigator.onLine) sync()
     return () => {
       window.removeEventListener('online', sync)
+      window.removeEventListener('focus', resume)
+      document.removeEventListener('visibilitychange', resume)
       window.removeEventListener('offline', markOffline)
       window.removeEventListener('dostigator:queue', updateSyncState)
     }
