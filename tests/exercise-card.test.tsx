@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExerciseCard } from '../src/components/ExerciseCard'
 import type { PreviousResult, WorkoutExerciseDraft } from '../src/types/training'
 
@@ -26,11 +26,13 @@ const previous: PreviousResult = {
 }
 
 describe('exercise card', () => {
+  beforeEach(() => localStorage.clear())
   afterEach(cleanup)
   it('shows previous result and database-backed instructions', () => {
-    render(<ExerciseCard exercise={exercise} previous={previous} onSetChange={vi.fn()} onApplyValues={vi.fn()} onToggleDone={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
-    expect(screen.getByText(/60 кг × 12/)).toBeInTheDocument()
-    expect(screen.getByText(/отдых 2 мин/)).toBeInTheDocument()
+    render(<ExerciseCard exercise={exercise} previous={previous} onRecordSet={vi.fn()} onUndoSet={vi.fn()} onSkipSet={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
+    expect(screen.getAllByText(/60 кг × 12/)[0]).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Техника, отдых и изменение упражнения'))
+    expect(screen.getByText(/Отдых: 2 мин/)).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Стартовые ориентиры веса' })).toHaveTextContent(/25 кг.*40 кг.*50 кг/)
     const opener = screen.getByRole('button', { name: 'Как делать' })
     opener.focus()
@@ -55,13 +57,13 @@ describe('exercise card', () => {
 
   it('keeps work-set comparisons aligned when a warmup is inserted', () => {
     const warmed = { ...exercise, sets: [{ ...exercise.sets[0]!, id: 'warmup', isWarmup: true }, { ...exercise.sets[0]!, setNumber: 2 }] }
-    render(<ExerciseCard exercise={warmed} previous={previous} onSetChange={vi.fn()} onApplyValues={vi.fn()} onToggleDone={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
-    expect(screen.getByRole('spinbutton', { name: /разминка 1, вес кг/ })).toHaveAttribute('placeholder', '—')
-    fireEvent.click(screen.getByRole('button', { name: /Рабочий подход 1 из 1/ }))
+    render(<ExerciseCard exercise={warmed} previous={previous} onRecordSet={vi.fn()} onUndoSet={vi.fn()} onSkipSet={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
+    expect(screen.getByRole('spinbutton', { name: /разминка 1, вес кг/ })).toHaveValue(null)
+    fireEvent.click(screen.getByRole('button', { name: /Подход 1 · не выполнен/ }))
     const workInput = screen.getByRole('spinbutton', { name: /подход 1, вес кг/ })
-    expect(workInput).toHaveAttribute('placeholder', '60')
-    const comparison = workInput.closest('.set-block')!
-    expect(within(comparison as HTMLElement).getByText('62,5 кг × 8')).toBeInTheDocument()
+    expect(workInput).toHaveValue(60)
+    const comparison = workInput.closest('.active-set')!
+    expect(within(comparison as HTMLElement).getAllByText('60 кг × 12')[0]).toBeInTheDocument()
     expect(screen.queryByRole('spinbutton', { name: /разминка 1, вес кг/ })).not.toBeInTheDocument()
   })
 })

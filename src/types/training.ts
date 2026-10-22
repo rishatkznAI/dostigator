@@ -10,9 +10,11 @@ export type WorkoutTemplateItem = {
   sortOrder: number
   setCount: number
   repTarget: string
+  restSeconds?: 90 | 120
 }
 
 export type WorkoutTemplate = {
+  programRevision?: string
   code: string
   title: string
   sortOrder: number
@@ -26,11 +28,13 @@ export type WorkoutSetDraft = {
   reps: number | null
   rir: number | null
   done: boolean
+  skipped?: boolean
   isWarmup: boolean
   completedAt: string | null
 }
 
 export type WorkoutExerciseDraft = {
+  restSeconds?: 90 | 120
   id: string
   exercise: Exercise
   target: string
@@ -57,6 +61,7 @@ export type ActiveRestState = {
 
 export type WorkoutDraft = {
   schemaVersion: 3
+  programRevision?: string
   id: string
   userId: string
   templateCode: string
@@ -78,6 +83,9 @@ export type PreviousResult = {
   finishedAt: string
   exerciseKey: string
   sets: WorkoutSetDraft[]
+  target?: string
+  readinessMode?: string | null
+  earlier?: PreviousResult
 }
 
 export type HistoryWorkout = {
@@ -130,12 +138,6 @@ export type WeeklyStats = {
   workouts: number
   sets: number
   volume: number
-}
-
-export type OverloadRecommendation = {
-  mode: 'baseline' | 'increase' | 'reps' | 'recover'
-  eyebrow: string
-  message: string
 }
 
 export type PersonalBackup = {

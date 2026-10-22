@@ -8,6 +8,7 @@ const isGitHubPages = process.env.GITHUB_PAGES === 'true'
 
 // https://vite.dev/config/
 export default defineConfig({
+  cacheDir: '.cache/vite',
   base: isGitHubPages ? '/dostigator/' : '/',
   plugins: [
     react(),
@@ -35,6 +36,7 @@ export default defineConfig({
     ...(process.env.VITEST || isGitHubPages ? [] : [sites(), cloudflare()]),
   ],
   test: {
+    include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,

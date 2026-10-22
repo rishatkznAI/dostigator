@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-program-session-review",
+  "status": "draft-not-started",
+  "scope": "local-only",
+  "programId": "dostigator-strength-cardio",
+  "programRevisionId": "v2-proposal-2026-10-15-r3",
+  "activeProgramAssignment": null,
+  "activation": null,
+  "planSnapshot": {
+    "slot": "C",
+    "id": "v2-proposal-2026-10-15-r3:C",
+    "weekday": 6,
+    "dayName": "Суббота",
+    "mandatory": false,
+    "timeLimitMinutes": null,
+    "items": [],
+    "cardio": {
+      "blockId": "v2-proposal-2026-10-15-r3:C:cardio",
+      "parentSlot": "C",
+      "durationMinutes": [
+        30,
+        45
+      ],
+      "intensity": "не уточнена пользователем",
+      "activityKind": null,
+      "actual": null,
+      "plannedMinutesForPreview": 30
+    },
+    "programRevisionId": "v2-proposal-2026-10-15-r3",
+    "volumeMode": "standard"
+  },
+  "budget": {
+    "workingSets": 0,
+    "warmupMinutes": 5,
+    "transitionMinutes": 2,
+    "strengthMinutes": 0,
+    "restMinutes": 0,
+    "cardioMinutes": 30,
+    "totalMinutes": 37,
+    "reserveMinutes": null,
+    "fits": null
+  },
+  "budgetAssumptions": {
+    "warmupMinutes": 9,
+    "transitionMinutes": 8,
+    "workSetSeconds": 60,
+    "restUsesUpperBound": true,
+    "optionalExerciseRestSeconds": 90,
+    "optionalExerciseRestStatus": "preview-estimate-not-prescription"
+  },
+  "reviewSelections": {
+    "cardioActivityKind": null
+  },
+  "actualStrengthSets": [],
+  "actualCardio": null,
+  "pendingSubstitutionIds": [],
+  "writes": [],
+  "requiresSeparateActivationAgreement": true
+}

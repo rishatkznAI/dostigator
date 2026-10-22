@@ -1,7 +1,5 @@
 import type {
   HistoryWorkout,
-  OverloadRecommendation,
-  PreviousResult,
   WeeklyStats,
   WorkoutDraft,
   WorkoutSetDraft,
@@ -25,9 +23,9 @@ export function validateWorkoutSetValue(field: WorkoutSetNumericField, value: nu
   if (value === null) return { valid: true, value }
   if (!Number.isFinite(value)) return { valid: false, message: 'Введите конечное числовое значение' }
   if (field === 'weightKg') {
-    return value >= 0 && value <= 1000 && Number.isInteger(value * 2)
+    return value >= 0 && value <= 1000 && Number.isInteger(value * 4)
       ? { valid: true, value }
-      : { valid: false, message: 'Вес: от 0 до 1000 кг с шагом 0,5' }
+      : { valid: false, message: 'Вес: от 0 до 1000 кг с шагом 0,25' }
   }
   if (field === 'reps') {
     return Number.isInteger(value) && value >= 1 && value <= 1000
@@ -46,8 +44,8 @@ export function workoutDraftValidationError(draft: WorkoutDraft): string | null 
         const result = validateWorkoutSetValue(field, set[field])
         if (!result.valid) return `${exercise.exercise.name}, подход ${set.setNumber}: ${result.message}`
       }
-      if (set.done && (set.reps === null || set.rir === null)) {
-        return `${exercise.exercise.name}, подход ${set.setNumber}: укажите повторы и RIR`
+      if (set.done && set.reps === null) {
+        return `${exercise.exercise.name}, подход ${set.setNumber}: укажите повторы`
       }
     }
   }
@@ -61,7 +59,8 @@ export function createWorkoutDraft(template: WorkoutTemplate, userId: string, no
     id: sessionId,
     userId,
     templateCode: template.code,
-    title: `Тренировка ${template.code}`,
+    title: `Тренировка ${template.code}${template.programRevision ? " · V2.1" : ""}`,
+    ...(template.programRevision ? {programRevision:template.programRevision} : {}),
     startedAt: now.toISOString(),
     finishedAt: null,
     timerPausedAt: null,
@@ -77,6 +76,7 @@ export function createWorkoutDraft(template: WorkoutTemplate, userId: string, no
         id: exerciseId,
         exercise: item.exercise,
         target: item.repTarget,
+        ...(item.restSeconds ? {restSeconds:item.restSeconds} : {}),
         sortOrder: item.sortOrder,
         skipped: false,
         skipReason: '',
@@ -103,56 +103,6 @@ export function parseRepRange(target: string): { min: number; max: number; timed
 }
 
 const formatWeight = (weight: number) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(weight)
-
-export function getOverloadRecommendation(target: string, previous?: PreviousResult): OverloadRecommendation {
-  const range = parseRepRange(target)
-  const sets = previous?.sets.filter((set) => set.done && !set.isWarmup && set.reps !== null) ?? []
-  if (!range || sets.length === 0) {
-    return {
-      mode: 'baseline',
-      eyebrow: 'Первая точка',
-      message: 'Выбери уверенный рабочий вес и оставь 2 повтора в запасе.',
-    }
-  }
-
-  if (range.timed) {
-    const best = Math.max(...sets.map((set) => set.reps ?? 0))
-    return best >= range.max
-      ? { mode: 'increase', eyebrow: 'Следующая цель', message: 'Усложни вариант или добавь 5 секунд.' }
-      : { mode: 'reps', eyebrow: 'Цель сегодня', message: `Добавь время, сохраняя технику. Прошлый максимум — ${best} сек.` }
-  }
-
-  const allAtTop = sets.every((set) => (set.reps ?? 0) >= range.max && (set.rir ?? -1) >= 1)
-  const hitLimit = sets.some((set) => (set.reps ?? 0) < range.min || set.rir === 0)
-  const workingWeight = Math.max(...sets.map((set) => set.weightKg ?? 0))
-
-  if (allAtTop && workingWeight > 0) {
-    const increment = workingWeight >= 100 ? 5 : workingWeight >= 20 ? 2.5 : 1
-    return {
-      mode: 'increase',
-      eyebrow: 'Следующая цель',
-      message: `Попробуй ${formatWeight(workingWeight + increment)} кг. Если техника плывёт — вернись к прошлому весу.`,
-    }
-  }
-
-  if (hitLimit) {
-    return {
-      mode: 'recover',
-      eyebrow: 'Цель сегодня',
-      message: workingWeight > 0
-        ? `Сохрани ${formatWeight(workingWeight)} кг и верни все подходы в диапазон ${range.min}–${range.max}.`
-        : `Верни все подходы в диапазон ${range.min}–${range.max} без отказа.`,
-    }
-  }
-
-  return {
-    mode: 'reps',
-    eyebrow: 'Цель сегодня',
-    message: workingWeight > 0
-      ? `Сохрани ${formatWeight(workingWeight)} кг и добавь 1 повтор там, где можешь.`
-      : 'Добавь 1 повтор там, где можешь, сохраняя запас минимум 1 RIR.',
-  }
-}
 
 export const workoutVolume = (sets: WorkoutSetDraft[]) =>
   sets.filter((set) => set.done && !set.isWarmup).reduce((total, set) => total + (set.weightKg ?? 0) * (set.reps ?? 0), 0)
@@ -198,6 +148,7 @@ export const historySummary = (workout: HistoryWorkout) => {
   const sets = workout.exercises.flatMap((exercise) => exercise.sets).filter((set) => set.done && !set.isWarmup)
   return {
     minutes: Math.max(1, Math.round((new Date(workout.finishedAt).getTime() - new Date(workout.startedAt).getTime() - workout.timerPausedDurationMs) / 60_000)),
+    durationSeconds: Math.max(0,Math.floor((Date.parse(workout.finishedAt)-Date.parse(workout.startedAt)-workout.timerPausedDurationMs)/1000)),
     sets: sets.length,
     volume: workoutVolume(sets),
   }
@@ -222,7 +173,7 @@ export function getWeeklyStats(history: HistoryWorkout[], now = new Date()): Wee
 }
 
 export function formatSet(set: WorkoutSetDraft) {
-  const weight = set.weightKg ? `${formatWeight(set.weightKg)} кг` : 'свой вес'
+  const weight = set.weightKg===null ? 'вес не указан' : set.weightKg ? `${formatWeight(set.weightKg)} кг` : 'свой вес'
   return `${weight} × ${set.reps ?? '—'}${set.rir === null ? '' : ` · RIR ${set.rir}`}`
 }
 
@@ -237,16 +188,6 @@ export function getCompletedTemplateCodesThisWeek(history: HistoryWorkout[], now
   start.setHours(0, 0, 0, 0)
   start.setDate(start.getDate() - day)
   return new Set(history.filter((item) => new Date(item.finishedAt) >= start).map((item) => item.templateCode).filter(Boolean))
-}
-
-export function getCalibrationSuggestion(target: string, set?: WorkoutSetDraft) {
-  if (!set?.done || set.reps === null || set.rir === null) return null
-  const range = parseRepRange(target)
-  if (!range) return null
-  if (set.isWarmup) return 'Разминка готова. Для рабочего подхода выбери вес с запасом около 2 RIR.'
-  if (set.rir >= 4 && set.reps >= range.max) return 'Вес лёгкий: следующий рабочий подход можно немного увеличить.'
-  if (set.rir <= 1 || set.reps < range.min) return 'Нагрузка высокая: сохрани или немного уменьши вес в следующем подходе.'
-  return 'Рабочий вес подобран удачно — сохрани его для следующего подхода.'
 }
 
 export const estimatedOneRepMax = (weightKg: number, reps: number) =>

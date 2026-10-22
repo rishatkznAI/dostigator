@@ -1,0 +1,13 @@
+{
+  "name": "dostigator-program-v2-proposal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "node serve.mjs",
+    "test": "node --test model.test.mjs local-integration.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -35,7 +35,7 @@ vi.mock('../lib/trainingRepository', () => ({
   loadHistory: vi.fn().mockResolvedValue([]),
   loadMeasurements: vi.fn().mockResolvedValue([]),
 }))
-vi.mock('../lib/storage', () => ({ getActiveDraft: vi.fn(() => null) }))
+vi.mock('../lib/storage', () => ({ getActiveDraft: vi.fn(() => null),getSyncQueue:vi.fn(()=>[]) }))
 
 describe('full training entry point', () => {
   afterEach(cleanup)
@@ -46,7 +46,7 @@ describe('full training entry point', () => {
     expect(screen.getByRole('heading', { name: 'Привет, Ринат' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'История' })).toHaveAttribute('href', '/training/history')
     expect(screen.getByRole('link', { name: 'Питание' })).toHaveAttribute('href', '/nutrition')
-    expect(screen.getByRole('link', { name: 'Прогресс' })).toHaveAttribute('href', '/training/progress')
+    expect(screen.getByRole('link', { name: 'Прогресс тренировок' })).toHaveAttribute('href', '/training/progress')
     expect(screen.getByRole('link', { name: 'Замеры' })).toHaveAttribute('href', '/training/body')
     expect(screen.getByRole('link', { name: /Записать кардио и заметку/ })).toHaveAttribute('href', '/training/cardio')
     expect(screen.getByRole('link', { name: /Спа и восстановление/ })).toHaveAttribute('href', '/training/spa')
@@ -54,4 +54,23 @@ describe('full training entry point', () => {
       expect(screen.getByRole('link', { name: `Начать тренировку ${code}` })).toHaveAttribute('href', `/training/workout/${code}`)
     }
   })
+})
+
+it('counts A and B toward the two-day weekly goal; optional C and repeated A do not create an extra obligation',async()=>{
+ const {loadHistory}=await import('../lib/trainingRepository')
+ const now=new Date().toISOString()
+ const records=['A','A','C'].map((templateCode,i)=>({id:`synthetic-${i}`,templateCode,title:'Test',startedAt:now,finishedAt:now,timerPausedDurationMs:0,readinessMode:null,exercises:[]}))
+ vi.mocked(loadHistory).mockResolvedValueOnce(records)
+ const {container}=render(<MemoryRouter><TrainingPage/></MemoryRouter>)
+ await screen.findAllByText('Готово')
+ expect(container.querySelector('.week-ring')).toHaveTextContent('1/2')
+ expect(screen.getByText('Суббота · по желанию')).toBeInTheDocument()
+ cleanup()
+})
+
+it('does not suggest an additional mandatory session once both A and B are completed this week',async()=>{
+ const {loadHistory}=await import('../lib/trainingRepository');const now=new Date().toISOString()
+ vi.mocked(loadHistory).mockResolvedValueOnce(['A','B'].map((templateCode,i)=>({id:`both-${i}`,templateCode,title:'Test',startedAt:now,finishedAt:now,timerPausedDurationMs:0,readinessMode:null,exercises:[]})))
+ const {container}=render(<MemoryRouter><TrainingPage/></MemoryRouter>);await screen.findAllByText('Готово')
+ expect(container.querySelector('.week-ring')).toHaveTextContent('2/2');expect(screen.queryByText('Следующая')).not.toBeInTheDocument();cleanup()
 })

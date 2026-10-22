@@ -17,7 +17,7 @@ export function RestTimer({ until, exerciseName, plannedSeconds, onChange, onSki
     setNow(Date.now())
     const timer = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [until])
   const seconds = Math.max(0, Math.ceil((until - now) / 1000))
 
   useEffect(() => {
@@ -27,9 +27,9 @@ export function RestTimer({ until, exerciseName, plannedSeconds, onChange, onSki
 
   const clock = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
   return (
-    <aside className={`rest-timer ${seconds === 0 ? 'done' : ''}`} aria-live="polite">
+    <aside className={`rest-timer ${seconds === 0 ? 'done' : ''}`} aria-label="Таймер отдыха">
       <div>
-        <span>{seconds === 0 ? 'Отдых закончен' : `После: ${exerciseName}`}</span>
+        <span role="status">{seconds === 0 ? 'Отдых закончен' : `После: ${exerciseName}`}</span>
         <strong>{clock}</strong>
         <small>план {formatRestDuration(plannedSeconds)}</small>
       </div>

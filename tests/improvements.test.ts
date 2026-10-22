@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isPersonalBackup } from '../src/lib/trainingRepository'
-import { estimatedOneRepMax, getCalibrationSuggestion, getNextMandatoryWorkout, workoutVolume } from '../src/lib/workout'
+import { estimatedOneRepMax, getNextMandatoryWorkout, workoutVolume } from '../src/lib/workout'
+import { getNextSetTarget } from '../src/lib/set-logging'
 import type { HistoryWorkout, WorkoutSetDraft } from '../src/types/training'
 
 const set = (overrides: Partial<WorkoutSetDraft> = {}): WorkoutSetDraft => ({
@@ -20,8 +21,8 @@ describe('personal coaching improvements', () => {
 
   it('excludes warmups from volume and evaluates calibration', () => {
     expect(workoutVolume([set({ isWarmup: true, weightKg: 20 }), set()])).toBe(400)
-    expect(getCalibrationSuggestion('8–12', set({ reps: 12, rir: 4 }))).toMatch(/немного увеличить/)
-    expect(getCalibrationSuggestion('8–12', set({ reps: 7, rir: 0 }))).toMatch(/уменьши/)
+    expect(getNextSetTarget('8–12', set({ reps: 12, rir: 4 }))?.weightKg).toBe(40)
+    expect(getNextSetTarget('8–12', set({ reps: 7, rir: 0 }))?.weightKg).toBe(40)
   })
 
   it('uses repetitions in the strength progress metric', () => {

@@ -3,8 +3,13 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
+import { spawnSync } from 'node:child_process'
+import { dirname, delimiter } from 'node:path'
 import { journalCases } from './journal.cases.mjs'
+import { trainingUxCases } from './training-ux.cases.mjs'
 import { cardioCases } from './cardio.cases.mjs'
+import { productCases } from './product.cases.mjs'
+import { v21Cases } from './v21.cases.mjs'
 
 const ownerA = '10000000-0000-4000-8000-000000000001'
 const ownerB = '20000000-0000-4000-8000-000000000002'
@@ -128,9 +133,45 @@ try {
   `)
   const migrationDir = join(process.cwd(), 'supabase', 'migrations')
   const files = (await readdir(migrationDir)).filter((file) => file.endsWith('.sql')).sort()
-  for (const file of files) await admin.query(await readFile(join(migrationDir, file), 'utf8'))
+  for (const file of files) {
+    if (!file.endsWith('_add_v21_exercise_references.sql')) { await admin.query(await readFile(join(migrationDir,file),'utf8')); continue }
+    await admin.query(`insert into workout_sessions(id,user_id,template_code,title,started_at,finished_at) values
+      ('f1000000-0000-4000-8000-000000000001','${ownerA}','A','Legacy completed','2026-10-01','2026-10-01T01:00:00Z'),
+      ('f1000000-0000-4000-8000-000000000002','${ownerA}','B','Legacy active','2026-10-22',null)`)
+    await admin.query(`insert into workout_session_exercises(id,user_id,session_id,exercise_key,exercise_name,target,sort_order) values
+      ('f2000000-0000-4000-8000-000000000001','${ownerA}','f1000000-0000-4000-8000-000000000001','chest_press','Legacy name','8–12',1),
+      ('f2000000-0000-4000-8000-000000000002','${ownerA}','f1000000-0000-4000-8000-000000000002','rdl','Legacy draft RDL','8–12',1);
+      insert into workout_sets(id,user_id,session_id,session_exercise_id,set_number,weight_kg,reps,rir,done) values
+      ('f3000000-0000-4000-8000-000000000001','${ownerA}','f1000000-0000-4000-8000-000000000001','f2000000-0000-4000-8000-000000000001',1,40,12,null,true),
+      ('f3000000-0000-4000-8000-000000000002','${ownerA}','f1000000-0000-4000-8000-000000000002','f2000000-0000-4000-8000-000000000002',1,18,null,null,false)`)
+    const snapshot=async()=> (await admin.query(`select
+      (select jsonb_agg(to_jsonb(t) order by id) from workout_sessions t) sessions,
+      (select jsonb_agg(to_jsonb(t) order by id) from workout_session_exercises t) exercises,
+      (select jsonb_agg(to_jsonb(t) order by id) from workout_sets t) sets,
+      (select jsonb_agg(to_jsonb(t) order by code) from workout_templates t) templates,
+      (select jsonb_agg(to_jsonb(t) order by template_code,sort_order) from workout_template_items t) items,
+      (select jsonb_agg(to_jsonb(t) order by key) from exercise_library t where key not in ('pallof_press','cable_hip_extension')) library`)).rows[0]
+    const before=await snapshot()
+    await admin.query(await readFile(join(migrationDir,file),'utf8'))
+    assert.deepEqual(await snapshot(),before,'V2.1 must preserve legacy reference rows, completed history and active sessions')
+    await admin.query(await readFile(join(migrationDir,file),'utf8'))
+    assert.deepEqual(await snapshot(),before,'repeated V2.1 migration must preserve snapshots')
+    assert.equal(Number((await admin.query("select count(*) from exercise_library where key in ('pallof_press','cable_hip_extension')")).rows[0].count),2)
+    await admin.query("delete from workout_sessions where id in ('f1000000-0000-4000-8000-000000000001','f1000000-0000-4000-8000-000000000002')")
+    console.log('V2.1 upgrade: history, active sessions, templates and library preserved; repeated migration has no duplicates')
+  }
   await journalCases(admin, asUser, ownerA, ownerB)
   await cardioCases(admin, asUser, ownerA, ownerB)
+  await trainingUxCases(admin, asUser, ownerA, ownerB)
+  const productPeer=postgres.getPgClient();clients.push(productPeer);await productPeer.connect()
+  await productCases(admin, asUser, ownerA, ownerB, productPeer)
+  await v21Cases(admin, asUser, ownerA)
+  if(process.env.DOSTIGATOR_RUN_ADVISORS==='1') {
+    const check=spawnSync('npx',['--yes','supabase@2.121.0','db','advisors','--db-url',`postgresql://postgres:dostigator-test@127.0.0.1:${port}/postgres?sslmode=disable`,'--type','security','--level','warn','--fail-on','error'],
+      {encoding:'utf8',timeout:120000,env:{...process.env,PATH:dirname(process.execPath)+delimiter+process.env.PATH}})
+    console.log('Local Supabase security advisors:',check.stdout,check.stderr)
+    assert.equal(check.status,0,'local security advisors must not report an error')
+  }
   // The retroactive base migration must also be safe on an already-evolved database.
   await admin.query(await readFile(join(migrationDir, '20260825051101_create_trainlog_core_schema.sql'), 'utf8'))
   const trainlogTables = [
@@ -157,7 +198,7 @@ try {
   })
   await admin.query('begin')
   await admin.query('set local role anon')
-  assert.equal(Number((await admin.query('select count(*) from public.exercise_library')).rows[0].count), 20)
+  assert.equal(Number((await admin.query('select count(*) from public.exercise_library')).rows[0].count), 22)
   assert.equal(Number((await admin.query('select count(*) from public.workout_templates')).rows[0].count), 3)
   assert.equal(Number((await admin.query('select count(*) from public.workout_template_items')).rows[0].count), 22)
   await admin.query('commit')

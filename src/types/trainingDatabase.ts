@@ -43,6 +43,7 @@ export type Database = {
       }
       workout_sessions: {
         Row: {
+          revision: number
           id: string
           user_id: string
           template_code: string | null
@@ -219,6 +220,20 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['cardio_sessions']['Row'], 'created_at'> & { created_at?: string }
         Update: Partial<Database['public']['Tables']['cardio_sessions']['Insert']>
+        Relationships: []
+      }
+      cardio_facts: {
+        Row: Database['public']['Tables']['cardio_sessions']['Row'] & {
+          duration_seconds: number | null
+          workout_session_id: string | null
+          speed_kmh: number | null
+          incline_percent: number | null
+          resistance_level: number | null
+          revision: number
+          deleted_at: string | null
+        }
+        Insert: never
+        Update: never
         Relationships: []
       }
       daily_activity: {

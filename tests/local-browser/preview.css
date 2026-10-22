@@ -1,0 +1,13 @@
+.preview-nav { display: grid; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #292b34; }
+.preview-nav > span { color: #a7a9b3; font-size: 11px; }
+.preview-nav > div { display: flex; gap: 8px; }
+.preview-nav a { display: flex; flex: 1; align-items: center; justify-content: center; min-height: 44px; border: 1px solid #514126; border-radius: 12px; background: #171820; color: #ffc857; font-size: 14px; font-weight: 700; cursor: pointer; }
+.preview-intro { color: #a7a9b3; font-size: 13px; line-height: 1.6; }
+
+.preview-nav > div { display:flex; flex-wrap:wrap; gap:6px; }
+.preview-nav button { max-width:100%; font-size:12px; }
+
+.preview-nav { padding: 6px 12px; background: #161820; color: #b5bccb; font-size: 11px; }
+.preview-nav summary { min-height: 28px; display: flex; align-items: center; cursor: pointer; }
+.preview-nav:not([open])>div { display: none; }
+.preview-nav[open]>div { margin-top: 8px; }

@@ -1,0 +1,489 @@
+{
+  "schemaVersion": 2,
+  "programId": "dostigator-strength-cardio",
+  "revisionId": "v2-proposal-2026-10-15-r2",
+  "status": "proposal",
+  "active": false,
+  "activation": null,
+  "excludedExerciseKeys": [
+    "rdl"
+  ],
+  "sessions": [
+    {
+      "slot": "A",
+      "id": "v2-proposal-2026-10-15-r2:A",
+      "weekday": 1,
+      "dayName": "Понедельник",
+      "mandatory": true,
+      "timeLimitMinutes": 75,
+      "items": [
+        {
+          "exerciseKey": "leg_press",
+          "name": "Жим ногами",
+          "workingSets": 3,
+          "repRange": [
+            8,
+            12
+          ],
+          "restSeconds": [
+            120,
+            150
+          ],
+          "preliminaryLoad": {
+            "range": [
+              90,
+              100
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 1
+        },
+        {
+          "exerciseKey": "chest_press",
+          "name": "Жим в тренажёре на грудь",
+          "workingSets": 3,
+          "repRange": [
+            8,
+            12
+          ],
+          "restSeconds": [
+            120,
+            120
+          ],
+          "preliminaryLoad": {
+            "range": [
+              40,
+              45
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 2
+        },
+        {
+          "exerciseKey": "lat_pulldown",
+          "name": "Тяга верхнего блока",
+          "workingSets": 3,
+          "repRange": [
+            8,
+            12
+          ],
+          "restSeconds": [
+            120,
+            120
+          ],
+          "preliminaryLoad": {
+            "range": [
+              40,
+              45
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 3
+        },
+        {
+          "exerciseKey": "leg_curl",
+          "name": "Сгибание ног",
+          "workingSets": 2,
+          "repRange": [
+            10,
+            15
+          ],
+          "restSeconds": [
+            90,
+            90
+          ],
+          "preliminaryLoad": {
+            "range": [
+              30,
+              36
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 4
+        },
+        {
+          "exerciseKey": "lateral_raise",
+          "name": "Подъём гантелей в стороны",
+          "workingSets": 2,
+          "repRange": [
+            12,
+            20
+          ],
+          "restSeconds": [
+            60,
+            90
+          ],
+          "preliminaryLoad": {
+            "range": [
+              5,
+              6
+            ],
+            "unit": "kg",
+            "convention": "one-dumbbell",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 5
+        },
+        {
+          "exerciseKey": "knee_raise",
+          "name": "Подъём коленей в упоре",
+          "workingSets": 2,
+          "repRange": [
+            10,
+            15
+          ],
+          "restSeconds": [
+            60,
+            60
+          ],
+          "preliminaryLoad": {
+            "range": null,
+            "unit": "bodyweight",
+            "convention": "bodyweight",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 6
+        }
+      ],
+      "cardio": {
+        "blockId": "v2-proposal-2026-10-15-r2:A:cardio",
+        "parentSlot": "A",
+        "durationMinutes": [
+          20,
+          20
+        ],
+        "intensity": "умеренная",
+        "activityKind": null,
+        "actual": null
+      }
+    },
+    {
+      "slot": "B",
+      "id": "v2-proposal-2026-10-15-r2:B",
+      "weekday": 3,
+      "dayName": "Среда",
+      "mandatory": true,
+      "timeLimitMinutes": 75,
+      "items": [
+        {
+          "exerciseKey": "incline_db_press",
+          "name": "Наклонный жим гантелей",
+          "workingSets": 3,
+          "repRange": [
+            8,
+            12
+          ],
+          "restSeconds": [
+            120,
+            120
+          ],
+          "preliminaryLoad": {
+            "range": [
+              10,
+              12
+            ],
+            "unit": "kg",
+            "convention": "one-dumbbell",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 1
+        },
+        {
+          "exerciseKey": "seated_row",
+          "name": "Горизонтальная тяга блока",
+          "workingSets": 3,
+          "repRange": [
+            8,
+            12
+          ],
+          "restSeconds": [
+            120,
+            120
+          ],
+          "preliminaryLoad": {
+            "range": [
+              42.5,
+              47.5
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 2
+        },
+        {
+          "exerciseKey": "leg_press",
+          "name": "Жим ногами",
+          "workingSets": 3,
+          "repRange": [
+            10,
+            12
+          ],
+          "restSeconds": [
+            120,
+            150
+          ],
+          "preliminaryLoad": {
+            "range": [
+              90,
+              100
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 3
+        },
+        {
+          "exerciseKey": "leg_curl",
+          "name": "Сгибание ног",
+          "workingSets": 2,
+          "repRange": [
+            10,
+            15
+          ],
+          "restSeconds": [
+            90,
+            90
+          ],
+          "preliminaryLoad": {
+            "range": [
+              30,
+              36
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 4
+        },
+        {
+          "exerciseKey": "lateral_raise",
+          "name": "Подъём гантелей в стороны",
+          "workingSets": 2,
+          "repRange": [
+            12,
+            20
+          ],
+          "restSeconds": [
+            60,
+            90
+          ],
+          "preliminaryLoad": {
+            "range": [
+              5,
+              6
+            ],
+            "unit": "kg",
+            "convention": "one-dumbbell",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 5
+        },
+        {
+          "exerciseKey": "triceps_pushdown",
+          "name": "Разгибание рук на верхнем блоке",
+          "workingSets": 2,
+          "repRange": [
+            10,
+            15
+          ],
+          "restSeconds": [
+            60,
+            90
+          ],
+          "preliminaryLoad": {
+            "range": [
+              17.5,
+              20
+            ],
+            "unit": "kg",
+            "convention": "machine-scale",
+            "status": "unconfirmed-reference"
+          },
+          "prescribedWeightKg": null,
+          "order": 6
+        }
+      ],
+      "cardio": {
+        "blockId": "v2-proposal-2026-10-15-r2:B:cardio",
+        "parentSlot": "B",
+        "durationMinutes": [
+          20,
+          20
+        ],
+        "intensity": "умеренная",
+        "activityKind": null,
+        "actual": null
+      }
+    },
+    {
+      "slot": "C",
+      "id": "v2-proposal-2026-10-15-r2:C",
+      "weekday": 6,
+      "dayName": "Суббота",
+      "mandatory": false,
+      "timeLimitMinutes": null,
+      "items": [],
+      "optionalItems": [
+        {
+          "slot": "biceps",
+          "name": "Сгибание рук с гантелями",
+          "workingSets": 2,
+          "repRange": [
+            10,
+            15
+          ],
+          "variants": [
+            {
+              "exerciseKey": "biceps_curl",
+              "name": "Сгибание рук с гантелями"
+            }
+          ]
+        },
+        {
+          "slot": "calves",
+          "name": "Икры",
+          "workingSets": 2,
+          "repRange": [
+            12,
+            20
+          ],
+          "variants": [
+            {
+              "exerciseKey": "calf_raise",
+              "name": "Подъём на носки в Смите — если подходит оборудование"
+            }
+          ]
+        },
+        {
+          "slot": "abs",
+          "name": "Пресс",
+          "workingSets": 2,
+          "repRange": [
+            10,
+            15
+          ],
+          "variants": [
+            {
+              "exerciseKey": "knee_raise",
+              "name": "Подъём коленей в упоре"
+            },
+            {
+              "exerciseKey": "cable_crunch",
+              "name": "Скручивания на блоке"
+            }
+          ]
+        }
+      ],
+      "cardio": {
+        "blockId": "v2-proposal-2026-10-15-r2:C:cardio",
+        "parentSlot": "C",
+        "durationMinutes": [
+          30,
+          45
+        ],
+        "intensity": "не уточнена пользователем",
+        "activityKind": null,
+        "actual": null
+      }
+    }
+  ],
+  "policies": {
+    "carryOverMissedOptionalDay": false,
+    "factsSeparateFromPlans": true,
+    "legacyHistoryReadOnly": true,
+    "optionalExercisesDefaultSelected": false,
+    "optionalRequiresEquipmentAndNoDiscomfort": true,
+    "reducedVolume": "optional-review-variant-two-sets-per-exercise",
+    "reducedVisitsCount": null,
+    "progressionRequires": [
+      "same-program-revision",
+      "same-day-slot",
+      "same-exercise",
+      "same-equipment",
+      "same-weight-convention",
+      "same-rep-range",
+      "same-working-set-count",
+      "same-volume-mode",
+      "complete-confirmed-session",
+      "no-discomfort"
+    ],
+    "timerAssumptions": {
+      "warmupMinutes": 9,
+      "transitionMinutes": 8,
+      "workSetSeconds": 60,
+      "restUsesUpperBound": true,
+      "optionalExerciseRestSeconds": 90,
+      "optionalExerciseRestStatus": "preview-estimate-not-prescription"
+    },
+    "automaticHeavyAxialExerciseAdditions": false,
+    "newExerciseRequiresSeparateAgreement": true,
+    "pendingSubstitutionsDefaultEnabled": false,
+    "activationRequiresSeparateAgreement": true,
+    "integrationScope": "local-draft-only"
+  },
+  "supersedesRevisionId": "v2-proposal-2026-10-15",
+  "clarification": {
+    "date": "2026-10-15",
+    "source": "user-reported",
+    "exerciseKey": "rdl",
+    "priorLowerBackDiscomfort": true,
+    "currentDiscomfort": false,
+    "decision": "temporarily-excluded",
+    "returnRequiresSeparateAgreement": true
+  },
+  "pendingSubstitutions": [
+    {
+      "id": "B-lateral-raise-to-glute-bridge",
+      "slot": "B",
+      "replacesExerciseKey": "lateral_raise",
+      "status": "pending-user-agreement",
+      "enabled": false,
+      "automatic": false,
+      "candidate": {
+        "exerciseKey": "glute_bridge",
+        "name": "Ягодичный мост",
+        "workingSets": 2,
+        "repRange": [
+          10,
+          15
+        ],
+        "restSeconds": null,
+        "preliminaryLoad": {
+          "range": null,
+          "unit": "kg",
+          "convention": "unconfirmed",
+          "status": "unconfirmed-reference",
+          "description": "Лёгкая начальная нагрузка; конкретный вес не согласован"
+        },
+        "prescribedWeightKg": null
+      },
+      "unresolved": [
+        "equipment-and-variant",
+        "rest-seconds",
+        "specific-light-load",
+        "time-budget-recheck"
+      ]
+    }
+  ]
+}

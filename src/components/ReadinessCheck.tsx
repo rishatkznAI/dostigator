@@ -2,13 +2,13 @@ import { BatteryCharging, Brain, ShieldAlert } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import type { WorkoutReadiness } from '../types/training'
 
-type Props = { onComplete: (readiness: WorkoutReadiness) => void }
+type Props = { onComplete: (readiness: WorkoutReadiness) => void; submitLabel?: string }
 
 const Scale = ({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) => (
   <label className="readiness-scale"><span>{label}</span><input aria-label={label} type="range" min="1" max="5" step="1" value={value} onChange={(event) => onChange(Number(event.target.value))} /><strong>{value}/5</strong></label>
 )
 
-export function ReadinessCheck({ onComplete }: Props) {
+export function ReadinessCheck({ onComplete, submitLabel = 'Начать тренировку' }: Props) {
   const [sleep, setSleep] = useState(3)
   const [energy, setEnergy] = useState(3)
   const [stress, setStress] = useState(3)
@@ -31,8 +31,8 @@ export function ReadinessCheck({ onComplete }: Props) {
         <Scale label="Стресс" value={stress} onChange={setStress} />
         <label className="check-row"><input type="checkbox" checked={discomfort} onChange={(event) => setDiscomfort(event.target.checked)} /><ShieldAlert /><span>Есть боль или необычный дискомфорт</span></label>
         <label>Комментарий, необязательно<textarea maxLength={500} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Например: плохо спал, напряжена поясница" /></label>
-        <div className={`readiness-result ${reduced ? 'reduced' : 'normal'}`}><strong>{reduced ? 'Облегчённый режим' : 'Обычный режим'}</strong><span>{reduced ? 'Не стремитесь к рекорду, оставляйте 2–3 RIR и при необходимости уберите один рабочий подход.' : 'Работайте по плану и сохраняйте технику.'}</span></div>
-        <button className="primary-button wide">Начать тренировку</button>
+        <div className={`readiness-result ${reduced ? 'reduced' : 'normal'}`}><strong>{reduced ? 'Облегчённый режим' : 'Обычный режим'}</strong><span>{reduced ? 'Рекомендации без прибавки нагрузки. Состав и число подходов автоматически не меняются.' : 'Работайте по плану и сохраняйте технику.'}</span></div>
+        <button className={submitLabel==='Начать тренировку'?'primary-button wide':'training-secondary'}>{submitLabel}</button>
       </form>
     </section>
   )

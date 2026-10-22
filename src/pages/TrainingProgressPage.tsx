@@ -1,77 +1,54 @@
-import { TrendingUp } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { LineChart } from '../components/LineChart'
-import { useTemplates } from '../hooks/useTemplates'
+import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 import { loadHistory } from '../lib/trainingRepository'
-import { estimatedOneRepMax, formatNumber, parseRepRange, workoutVolume } from '../lib/workout'
+import { getSyncQueue } from '../lib/storage'
+import { CARDIO_CHANGED_EVENT, getCachedCardio, getCardioQueue, loadCardio, type CardioSession } from '../lib/cardio'
+import { cacheTrainingHistory, cachedTrainingHistory, compareExercise, exerciseFactsText, mergeTrainingHistory, weeklyProgress, workFacts } from '../lib/training-insights'
+import { getWorkoutTargets, selectPreviousResults } from '../lib/workout-targets'
+import { TRAINING_SYNC_COMPLETED_EVENT } from '../hooks/useSyncQueue'
 import type { HistoryWorkout } from '../types/training'
 
-const shortDate = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
-
 export function TrainingProgressPage() {
-  const { templates } = useTemplates()
-  const [history, setHistory] = useState<HistoryWorkout[]>([])
+  const { user } = useAuth()
+  const userId = user?.id
+  const [history, setHistory] = useState<HistoryWorkout[]>(() => user ? cachedTrainingHistory(user.id) : [])
+  const [cardio, setCardio] = useState<CardioSession[]>(() => user ? getCachedCardio(userId!) : [])
   const [exerciseKey, setExerciseKey] = useState('')
-  const [error, setError] = useState<string | null>(null)
-
+  const [status, setStatus] = useState('Локальная копия · обновляем историю')
+  const refresh = useCallback(async () => {
+    if (!userId) return
+    if (!navigator.onLine) { setStatus('Офлайн · локальная копия истории и ожидающие синхронизации результаты'); setCardio(getCachedCardio(userId!)); return }
+    const [strength, endurance] = await Promise.allSettled([loadHistory(500), loadCardio(userId)])
+    if (strength.status === 'fulfilled') { setHistory(strength.value); cacheTrainingHistory(userId, strength.value) }
+    if (endurance.status === 'fulfilled') setCardio(endurance.value)
+    else setCardio(getCachedCardio(userId!))
+    setStatus(strength.status === 'fulfilled' && endurance.status === 'fulfilled' ? 'История обновлена; локальные записи включены один раз' : 'Не всё удалось обновить · показаны доступные записи и локальная копия')
+  }, [userId])
   useEffect(() => {
-    void loadHistory(250)
-      .then(setHistory)
-      .catch((reason: Error) => setError(reason.message))
-  }, [])
-  const exercises = useMemo(() => {
+    void refresh()
+    window.addEventListener('online', refresh); window.addEventListener(CARDIO_CHANGED_EVENT, refresh); window.addEventListener(TRAINING_SYNC_COMPLETED_EVENT, refresh)
+    return () => { window.removeEventListener('online', refresh); window.removeEventListener(CARDIO_CHANGED_EVENT, refresh); window.removeEventListener(TRAINING_SYNC_COMPLETED_EVENT, refresh) }
+  }, [refresh])
+  const pending = user ? getSyncQueue(user.id) : []
+  const all = mergeTrainingHistory(history, pending)
+  const exercises = (() => {
     const map = new Map<string, string>()
-    templates.flatMap((template) => template.items).forEach(({ exercise }) => map.set(exercise.key, exercise.name))
-    history.flatMap((workout) => workout.exercises).forEach((exercise) => {
-      if (exercise.exerciseKey) map.set(exercise.exerciseKey, exercise.exerciseName)
-    })
-    return [...map].map(([key, name]) => ({ key, name })).sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-  }, [history, templates])
-
-  useEffect(() => {
-    if (!exerciseKey && exercises[0]) setExerciseKey(exercises[0].key)
-  }, [exerciseKey, exercises])
-
-  const sessions = useMemo(
-    () => history
-      .map((workout) => ({ workout, exercise: workout.exercises.find((item) => item.exerciseKey === exerciseKey) }))
-      .filter((item): item is { workout: HistoryWorkout; exercise: HistoryWorkout['exercises'][number] } => !!item.exercise)
-      .reverse(),
-    [exerciseKey, history],
-  )
-  const weighted = sessions.some(({ exercise }) => exercise.sets.some((set) => set.done && !set.isWarmup && (set.weightKg ?? 0) > 0))
-  const timed = parseRepRange(sessions.at(-1)?.exercise.target ?? '')?.timed ?? false
-  const points = sessions.map(({ workout, exercise }) => ({
-    label: shortDate.format(new Date(workout.finishedAt)),
-    value: Math.max(0, ...exercise.sets.filter((set) => set.done && !set.isWarmup).map((set) => weighted
-      ? estimatedOneRepMax(set.weightKg ?? 0, set.reps ?? 0)
-      : set.reps ?? 0)),
-  }))
-  const best = Math.max(0, ...points.map((point) => point.value))
-  const metricLabel = weighted ? 'Расчётная сила' : timed ? 'Лучшее время' : 'Лучший результат'
-  const unit = weighted ? 'кг' : timed ? 'сек' : 'повт.'
-  const previousBest = Math.max(0, ...points.slice(0, -1).map((point) => point.value))
-  const latestValue = points.at(-1)?.value ?? 0
-  const volume = sessions.reduce((total, { exercise }) => total + workoutVolume(exercise.sets), 0)
-
-  return (
-    <div className="page">
-      <header className="page-header"><p className="eyebrow">Динамика</p><h1>Прогресс</h1><p>Смотри, как рабочий вес растёт от тренировки к тренировке.</p></header>
-      {error && <div className="error-card">{error}</div>}
-      <label className="select-label" htmlFor="exercise">Упражнение</label>
-      <select id="exercise" className="exercise-select" value={exerciseKey} onChange={(event) => setExerciseKey(event.target.value)}>
-        {exercises.map((exercise) => <option key={exercise.key} value={exercise.key}>{exercise.name}</option>)}
-      </select>
-      <section className="chart-card">
-        <div className="chart-heading"><div><span>{metricLabel}</span><strong>{formatNumber(best)} {unit}</strong></div><TrendingUp /></div>
-        <LineChart points={points} unit={unit} />
-      </section>
-      {points.length > 1 && latestValue > previousBest && <div className="pr-banner"><TrendingUp /><div><strong>Новый личный рекорд</strong><span>Предыдущий лучший результат: {formatNumber(previousBest)} {unit}</span></div></div>}
-      <div className="progress-stats">
-        <div><span>Выполнений</span><strong>{sessions.length}</strong></div>
-        <div><span>Общий тоннаж</span><strong>{formatNumber(volume)} кг</strong></div>
-      </div>
-      {!sessions.length && <div className="empty-state compact"><h2>Нужна первая тренировка</h2><p>График строится только по завершённым подходам.</p></div>}
-    </div>
-  )
+    all.flatMap((item) => item.exercises).forEach((e) => { if (e.exerciseKey && !e.skipped && workFacts(e.sets).length) map.set(e.exerciseKey, e.exerciseName) })
+    return [...map]
+  })()
+  const selected = exerciseKey || exercises[0]?.[0] || ''
+  const sessions = all.map((workout) => ({ workout, exercise: workout.exercises.find((e) => e.exerciseKey === selected && !e.skipped && workFacts(e.sets).length) })).filter((item): item is { workout: HistoryWorkout; exercise: HistoryWorkout['exercises'][number] } => !!item.exercise)
+  const weeks = weeklyProgress(all, cardio)
+  const latest = sessions[0], first = sessions.at(-1)
+  const lastResult = selectPreviousResults(all, [selected]).get(selected)
+  const recommendation = latest && getWorkoutTargets(latest.exercise.target, latest.exercise.sets.filter((set) => !set.isWarmup).length, lastResult, false, { today: new Date().toISOString(), weightStep: userId ? Number(localStorage.getItem(`trainlog:weight-step:${userId}:${selected}`)) : undefined })
+  const localCardioCount = user ? getCardioQueue(user.id).length : 0
+  return <div className="page">
+    <header className="page-header"><p className="eyebrow">Динамика</p><h1>Прогресс по неделям</h1><p>Фактические веса, повторы и время кардио.</p></header>
+    <p className="entry-caption" role="status">{status}</p>
+    {(pending.length > 0 || localCardioCount > 0) && <p className="entry-caption">Только на устройстве: силовых {pending.length}, кардио {localCardioCount}. Очистка данных браузера может удалить эти записи.</p>}
+    <section className="training-session-card"><h2>Последние 8 недель</h2><div className="weekly-overview">{weeks.map((week, index) => <div className="week-row" key={week.from}><strong>{index === 0 ? 'Эта неделя' : new Date(`${week.from}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</strong><span>{week.workouts} силовых · {week.sets} подходов</span><span>Кардио: <b>{week.cardioMinutes} мин {week.cardioSeconds%60} сек</b>{weeks[index + 1] && <small> · {week.cardioMinutes - weeks[index + 1].cardioMinutes > 0 ? '+' : ''}{week.cardioMinutes - weeks[index + 1].cardioMinutes} к прошлой неделе</small>}</span></div>)}</div><small>Текущая неделя ещё идёт. Минуты показывают время занятий; сами по себе они не доказывают изменение выносливости.</small></section>
+    <section className="training-session-card"><h2>Вес и повторения</h2>{!exercises.length ? <p>Нет записанных рабочих подходов.</p> : <><label>Упражнение<select aria-label="Упражнение для сравнения" value={selected} onChange={(event) => setExerciseKey(event.target.value)}>{exercises.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>{latest && first && sessions.length > 1 && <div className="workout-result"><strong>Изменение с {new Date(first.workout.finishedAt).toLocaleDateString('ru-RU')}</strong><p>{latest.workout.readinessMode === first.workout.readinessMode ? compareExercise(latest.exercise, first.exercise) : 'Режимы тренировок отличаются. Сравни фактические подходы ниже.'}</p></div>}{recommendation && <p className="recommendation-reason"><strong>Следующий шаг: </strong>{recommendation.message}</p>}{sessions.map(({ workout, exercise }) => <article className="week-row" key={workout.id}><strong>{new Date(workout.finishedAt).toLocaleDateString('ru-RU')}</strong><p>{exerciseFactsText(exercise)}</p><small>{pending.some((item) => item.id === workout.id) ? 'Локальный результат · ожидает синхронизации' : 'История'}</small></article>)}</>}</section>
+    <button type="button" className="text-button" onClick={() => void refresh()}>Обновить историю</button>
+  </div>
 }
