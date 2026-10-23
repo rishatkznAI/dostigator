@@ -601,3 +601,14 @@ input:focus, textarea:focus, select:focus { border-color: #8c7537; box-shadow: 0
 
 .sheet .history-correction-caption { color: var(--text-secondary); font-size: .85rem; line-height: 1.5; }
 .sheet .history-correction-form select { height: 48px; appearance: none; padding-right: 36px; background-image: linear-gradient(45deg, transparent 50%, #a3a3ad 50%), linear-gradient(135deg, #a3a3ad 50%, transparent 50%); background-position: calc(100% - 18px) center, calc(100% - 12px) center; background-size: 6px 6px; background-repeat: no-repeat; }
+
+/* Updates remain a user decision so a release cannot discard an open form. */
+.app-update-notice { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); border-bottom: 1px solid #77672b; background: #252212; color: #f4f1de; }
+.app-update-notice > div:first-child { flex: 1 1 260px; min-width: 0; }
+.app-update-notice strong { font-size: .95rem; }
+.app-update-notice p { margin: 4px 0 0; font-size: .82rem; line-height: 1.45; }
+.app-update-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.app-update-actions button { min-height: 44px; padding: 8px 12px; border: 1px solid #8c7940; border-radius: 10px; background: #e7c75a; color: #17160f; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.app-update-actions button:last-child { background: transparent; color: #f4f1de; }
+.app-update-actions button:disabled { opacity: .55; cursor: wait; }
+.app-update-notice--compact > div:first-child { flex-basis: auto; }

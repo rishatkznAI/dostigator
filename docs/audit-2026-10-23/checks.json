@@ -1,7 +1,7 @@
 {
   "baseline": "29c8808df874294f9df8d8cbc75856f652b05bf6",
   "vitest": {
-    "pass": 512,
+    "pass": 523,
     "fail": 0,
     "skip": 7
   },
@@ -21,7 +21,7 @@
     1280
   ],
   "physical_iPhone_verified": false,
-  "production_modified": false,
+  "production_modified": true,
   "browser": {
     "after": {
       "pass": 29,
@@ -57,7 +57,22 @@
       "pass": 40,
       "fail": 0,
       "unhandled_js": 0
+    },
+    "pwa-update": {
+      "pass": 11,
+      "fail": 0,
+      "unhandled_js": 0
     }
   },
-  "browser_pass": 150
+  "browser_pass": 161,
+  "initial_audit_vitest_pass": 512,
+  "release_config": {
+    "pass": 3,
+    "fail": 0
+  },
+  "production_migration": {
+    "version": "20261023120422",
+    "name": "add_safe_workout_set_corrections",
+    "existingApplicationRowsUnchanged": true
+  }
 }
