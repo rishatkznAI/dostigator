@@ -21,7 +21,7 @@ it('rejects zero cable resistance without inventing a completed set',()=>{
 })
 it('accepts a real zero additional load and labels it explicitly',()=>{
  const record=mount('leg_press');fireEvent.change(screen.getByRole('spinbutton',{name:/вес кг/}),{target:{value:'0'}})
- const button=screen.getByRole('button',{name:'Записать подход 1 · Тест'});expect(button).toHaveTextContent('Без доп. веса × 10');fireEvent.click(button)
+ const button=screen.getByRole('button',{name:'Записать подход 1 · Тест'});expect(button).toHaveTextContent('0 кг × 10');fireEvent.click(button)
  expect(record).toHaveBeenCalledWith({weightKg:0,reps:10,rir:null})
 })
 it('records a timed bodyweight set without displaying kg',()=>{
