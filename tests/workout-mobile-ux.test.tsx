@@ -24,7 +24,7 @@ describe('mobile workout UX regression', () => {
   it('keeps conflict B out of the active workout A while preserving the recovery link', () => {
     const { a } = seedConflict()
     render(<MemoryRouter><WorkoutSyncConflicts userId="mobile-owner" currentWorkoutId={a.id} /></MemoryRouter>)
-    expect(screen.getByRole('status')).toHaveTextContent('Есть 1 неразрешённая тренировка')
+    expect(screen.getByRole('status')).toHaveTextContent('Другие конфликты синхронизации: 1')
     expect(screen.getByRole('link', { name: 'Открыть историю' })).toHaveAttribute('href', '/training/history')
     expect(screen.queryByRole('region', { name: 'Конфликт силовой тренировки' })).not.toBeInTheDocument()
   })
