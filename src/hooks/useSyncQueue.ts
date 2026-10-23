@@ -23,7 +23,7 @@ export function useSyncQueue(userId?: string) {
       setSyncing(true)
       for (const id of cancellations) {
         try {
-          await workoutWrites.cancel(userId, id, () => deleteWorkoutSession(id))
+          await workoutWrites.cancel(userId, id, () => deleteWorkoutSession(id,userId))
           removeQueuedDraft(userId, id)
           removeCancelledWorkout(userId, id)
           changed = true

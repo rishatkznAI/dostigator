@@ -338,7 +338,7 @@ export function WorkoutPage() {
     setFinishing(true)
     try { enqueueDraft(completed) } catch { finishLock.current = false; setFinishing(false); setMessage('Не удалось сохранить результат на устройство. Тренировка остаётся открытой.'); return }
     // Local success is visible immediately, even if the server is slow or offline.
-    clearActiveDraft(completed.userId)
+    clearActiveDraft(completed.userId,completed.id,draft.updatedAt)
     if (navigator.onLine) void workoutSyncQueue.enqueue(completed).then(()=>{
       removeQueuedDraft(completed.userId,completed.id,completed.updatedAt)
       window.dispatchEvent(new CustomEvent('dostigator:training-sync-completed',{detail:{userId:completed.userId}}))
@@ -348,6 +348,10 @@ export function WorkoutPage() {
 
   const cancelWorkout = async () => {
     if (cancelLock.current) return
+    const latest=getActiveDraft(draft.userId)
+    if(latest && (latest.id!==draft.id || latest.updatedAt!==draft.updatedAt)) {
+      setMessage('Черновик обновился в другой вкладке. Проверь результат перед отменой.');setCancelOpen(false);return
+    }
     if (linkedCardio.length) {
       setMessage('Кардио уже связано с этой тренировкой. Заверши силовую либо сначала удали связанное кардио.');setCancelOpen(false);return
     }
@@ -360,13 +364,15 @@ export function WorkoutPage() {
     setCancelling(true)
     try {
       archiveCancelledDraft(draft)
-      if (navigator.onLine) await workoutSyncQueue.cancel(draft.userId, draft.id, () => deleteWorkoutSession(draft.id))
+      if (navigator.onLine) await workoutSyncQueue.cancel(draft.userId, draft.id, () => deleteWorkoutSession(draft.id,draft.userId))
       else {
         // Durable intent precedes removing the active pointer. The full draft remains archived.
         enqueueCancelledWorkout(draft.userId, draft.id)
         await workoutSyncQueue.cancel(draft.userId, draft.id, async () => undefined)
       }
-      clearActiveDraft(draft.userId)
+      const retained=getActiveDraft(draft.userId)
+      if(retained?.id===draft.id) archiveCancelledDraft(retained)
+      clearActiveDraft(draft.userId,draft.id,retained?.updatedAt)
       if (navigator.onLine) removeCancelledWorkout(draft.userId,draft.id)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Отмена не подтверждена. Черновик сохранён.')

@@ -78,3 +78,26 @@ it('does not submit an old profile draft after account change',async()=>{
  await expect(syncWorkoutDraft(createWorkoutDraft(template,'owner'))).rejects.toThrow('Аккаунт изменился')
  expect(rpc).not.toHaveBeenCalled()
 })
+
+it('does not cancel an old profile workout under the newly signed-in account',async()=>{
+ getUser.mockResolvedValue({data:{user:{id:'other'}},error:null})
+ await expect(deleteWorkoutSession('old-session','owner')).rejects.toThrow('Аккаунт изменился')
+ expect(rpc).not.toHaveBeenCalled()
+})
+
+it('stores HTTP 409 conflicts without treating them as network failures',async()=>{
+ const draft=createWorkoutDraft(template,'owner')
+ rpc.mockResolvedValue({error:{code:'PT409',message:'conflict',details:JSON.stringify({session:{id:draft.id,revision:2},exercises:[],sets:[]})}})
+ await expect(syncWorkoutDraft(draft)).rejects.toThrow('сравни версии')
+ expect(JSON.parse(localStorage.getItem('trainlog:workout-conflicts:owner')!)[0].id).toBe(draft.id)
+})
+
+it('replays an envelope from the published client without changing its mutation payload',async()=>{
+ const draft=createWorkoutDraft(template,'owner')
+ const oldPayload={p_session:{id:draft.id,finished_at:null},p_exercises:[],p_sets:[],p_deleted_set_ids:[]}
+ const mutation=crypto.randomUUID()
+ localStorage.setItem(`trainlog:workout-cloud:owner:${draft.id}`,JSON.stringify({request:{stamp:draft.updatedAt,mutation,revision:0,payload:oldPayload}}))
+ rpc.mockResolvedValue({data:{id:draft.id,revision:1,finished_at:null},error:null})
+ await syncWorkoutDraft(draft)
+ expect(rpc.mock.calls[0][1]).toEqual({...oldPayload,p_mutation_id:mutation,p_expected_revision:0,p_expected_owner:'owner'})
+})

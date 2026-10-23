@@ -57,13 +57,21 @@ export function saveActiveDraft(draft: WorkoutDraft) {
   localStorage.setItem(`${ACTIVE_PREFIX}${draft.userId}`, JSON.stringify(draft))
 }
 
-export const clearActiveDraft = (userId: string) => localStorage.removeItem(`${ACTIVE_PREFIX}${userId}`)
+export function clearActiveDraft(userId: string, expectedId?: string, expectedUpdatedAt?: string) {
+  const current=getActiveDraft(userId)
+  if(expectedId!==undefined && current?.id!==expectedId) return
+  if(expectedUpdatedAt!==undefined && current?.updatedAt!==expectedUpdatedAt) return
+  localStorage.removeItem(`${ACTIVE_PREFIX}${userId}`)
+}
 
 export const getSyncQueue = (userId: string) =>
   parse<StoredWorkoutDraft[]>(localStorage.getItem(`${QUEUE_PREFIX}${userId}`), []).map(normalizeDraft)
 
 export function enqueueDraft(draft: WorkoutDraft) {
-  const queue = getSyncQueue(draft.userId).filter((item) => item.id !== draft.id)
+  const existing=getSyncQueue(draft.userId)
+  const current=existing.find(item=>item.id===draft.id)
+  if(current && (Date.parse(current.updatedAt)>Date.parse(draft.updatedAt) || (current.finishedAt && !draft.finishedAt))) return
+  const queue = existing.filter((item) => item.id !== draft.id)
   localStorage.setItem(`${QUEUE_PREFIX}${draft.userId}`, JSON.stringify([...queue, draft]))
 }
 

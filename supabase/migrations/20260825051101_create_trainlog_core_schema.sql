@@ -1,4 +1,5 @@
--- Base TrainLog schema. This matches the first migration already recorded in production.
+-- Local bootstrap schema. Its constraints and seeds differ from the original
+-- production migration with this version. Never replay it on an existing database.
 -- Program data is shared read-only; all personal rows are isolated by auth.uid() RLS.
 begin;
 

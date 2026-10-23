@@ -15,7 +15,6 @@ for(const file of (await readdir('supabase/migrations')).filter(f=>f.endsWith('.
 await admin.query(`create role authenticator login password 'test-api'; grant anon, authenticated to authenticator;
 create or replace function auth.uid() returns uuid language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.sub',true),''),nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid $$;
 grant usage on schema public to authenticated,anon;
-grant select,insert,update,delete on all tables in schema public to authenticated;
 grant select on exercise_library,workout_templates,workout_template_items to anon;`)
 const secret=randomBytes(48).toString('hex')
 const token=(sub,role='authenticated')=>{const body=[{alg:'HS256',typ:'JWT'},{role,sub,aud:'authenticated',iss:'isolated-test',exp:Math.floor(Date.now()/1000)+86400}].map(x=>Buffer.from(JSON.stringify(x)).toString('base64url')).join('.');return body+'.'+createHmac('sha256',secret).update(body).digest('base64url')}

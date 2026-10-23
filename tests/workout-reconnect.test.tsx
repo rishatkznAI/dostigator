@@ -35,3 +35,18 @@ it('preserves the full draft when online cancellation fails',async()=>{
  await screen.findByText('Сервер ещё не обновлён для V2.1.',{exact:true});expect(getActiveDraft('reconnect-owner')).toEqual(before)
  expect(JSON.parse(localStorage.getItem(`trainlog:cancelled-draft:reconnect-owner:${before.id}`)!)).toEqual(before)
 })
+
+it('a delayed cancellation preserves the different workout opened in another tab',async()=>{
+ online=true
+ let release!:()=>void
+ cancel.mockImplementationOnce(()=>new Promise<void>(r=>{release=r}))
+ mount()
+ fireEvent.click(await screen.findByRole('button',{name:'Отменить тренировку',exact:true}))
+ fireEvent.click(screen.getAllByRole('button',{name:'Отменить тренировку',exact:true}).at(-1)!)
+ await waitFor(()=>expect(cancel).toHaveBeenCalledOnce())
+ const newer=createWorkoutDraft(programV21Templates[1],'reconnect-owner')
+ saveActiveDraft(newer)
+ release()
+ await screen.findByText('Тренировки',{exact:true})
+ expect(getActiveDraft('reconnect-owner')).toEqual(newer)
+})
