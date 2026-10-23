@@ -27,7 +27,7 @@ export function getWorkoutTargets(target: string, plannedSets: number, previous?
   if (!range || !sets.length) return { mode: 'baseline', message: 'Нет прошлого факта. Выбери вес и запиши результат.', targets: [] as SetTarget[] }
   const targets = Array.from({ length: plannedSets }, (_, index): SetTarget => {
     const set = work[index]
-    return { weightKg: set?.done ? set.weightKg : null, reps: set?.done && set.reps !== null ? set.reps : range.min, rir: reduced ? 3 : 2, timed: range.timed }
+    return { weightKg: set?.done ? set.weightKg : null, reps: set?.done && set.reps !== null ? Math.min(range.max, set.reps) : range.min, rir: reduced ? 3 : 2, timed: range.timed }
   })
   const repeat = (message: string, mode = 'repeat') => ({ mode, message, targets })
   if (reduced) return repeat('Облегчённый режим: повтори или уменьши нагрузку, без прибавки.', 'recover')
@@ -60,7 +60,7 @@ export function getWorkoutTargets(target: string, plannedSets: number, previous?
 }
 
 export function formatSetTarget(target: SetTarget) {
-  return target.timed ? `${target.reps} сек` : `${target.weightKg===null ? 'Вес не задан' : target.weightKg ? `${formatNumber(target.weightKg)} кг` : 'без доп. веса'} × ${target.reps}`
+  return target.timed ? `${target.reps} сек` : `${target.weightKg===null ? 'Вес не задан' : target.weightKg ? `${formatNumber(target.weightKg)} кг` : '0 кг'} × ${target.reps}`
 }
 
 export function getSetTargetStatus(set: WorkoutSetDraft, target?: SetTarget) {
