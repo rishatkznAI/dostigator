@@ -18,7 +18,7 @@ import { useTemplates } from '../hooks/useTemplates'
 import { deleteWorkoutSession, loadExerciseLibrary, loadPreviousResults, loadHistory, syncWorkoutDraft } from '../lib/trainingRepository'
 import { formatRestDuration, getRestDurationSeconds, type RestDurationSeconds } from '../lib/rest-period'
 import { primeRestAlert } from '../lib/rest-alert'
-import { clearActiveDraft, enqueueCancelledWorkout, enqueueDraft, getActiveDraft, removeCancelledWorkout, removeQueuedDraft, saveActiveDraft } from '../lib/storage'
+import { archiveCancelledDraft, clearActiveDraft, enqueueCancelledWorkout, enqueueDraft, getActiveDraft, removeCancelledWorkout, removeQueuedDraft, saveActiveDraft } from '../lib/storage'
 import { createId, createWorkoutDraft, draftSummary, finishWorkoutTimer, elapsedClock, formatNumber, toggleWorkoutTimer, validateWorkoutSetValue, workoutDraftValidationError } from '../lib/workout'
 import { createWorkoutSyncQueue } from '../lib/workout-sync'
 import { recordSetAndPrepareNext, skipSet, undoSet } from '../lib/set-logging'
@@ -48,6 +48,10 @@ export function WorkoutPage() {
   const [alternatives, setAlternatives] = useState<Exercise[]>([])
   const [now, setNow] = useState(0)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(navigator.onLine ? 'local' : 'offline')
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncRetry, setSyncRetry] = useState(0)
+  const [cancelling, setCancelling] = useState(false)
+  const cancelLock = useRef(false)
   const [storageFailed, setStorageFailed] = useState(false)
   const finishLock = useRef(false)
   const [finishOpen, setFinishOpen] = useState(false)
@@ -103,7 +107,17 @@ export function WorkoutPage() {
   }, [exerciseKeys, historyBefore, historyRetry, userId])
 
   useEffect(() => {
-    if (!draft) return
+    const retry = () => setSyncRetry(value => value + 1)
+    const visible = () => { if (document.visibilityState === 'visible') retry() }
+    window.addEventListener('online', retry)
+    window.addEventListener('offline', retry)
+    window.addEventListener('focus', retry)
+    document.addEventListener('visibilitychange', visible)
+    return () => { window.removeEventListener('online', retry); window.removeEventListener('offline', retry); window.removeEventListener('focus', retry); document.removeEventListener('visibilitychange', visible) }
+  }, [])
+
+  useEffect(() => {
+    if (!draft || cancelling) return
     const stored = getActiveDraft(draft.userId)
     if (!stored && !storageFailed) { navigate('/training/history', { replace: true }); return }
     if (stored?.id === draft.id && Date.parse(stored.updatedAt) > Date.parse(draft.updatedAt)) { setDraft(stored); return }
@@ -113,6 +127,7 @@ export function WorkoutPage() {
       setSyncStatus('offline')
       return
     }
+    setSyncError(null)
     setSyncStatus('local')
     const timer = window.setTimeout(() => {
       autosaveTimerRef.current = null
@@ -121,8 +136,8 @@ export function WorkoutPage() {
         .then(() => {
           if (generation === syncGenerationRef.current) setSyncStatus('synced')
         })
-        .catch(() => {
-          if (generation === syncGenerationRef.current) setSyncStatus(navigator.onLine ? 'error' : 'offline')
+        .catch((error: unknown) => {
+          if (generation === syncGenerationRef.current) { setSyncStatus(navigator.onLine ? 'error' : 'offline'); setSyncError(error instanceof Error ? error.message : 'Облако не подтвердило сохранение. Черновик на устройстве.') }
         })
     }, 700)
     autosaveTimerRef.current = timer
@@ -130,7 +145,7 @@ export function WorkoutPage() {
       window.clearTimeout(timer)
       if (autosaveTimerRef.current === timer) autosaveTimerRef.current = null
     }
-  }, [draft, navigate, workoutSyncQueue, storageFailed])
+  }, [draft, navigate, workoutSyncQueue, storageFailed, syncRetry, cancelling])
 
   useEffect(() => {
     if (!user) return
@@ -211,7 +226,7 @@ export function WorkoutPage() {
       }
     }
     if (target.weightKg === null || target.reps === null) {
-      setMessage('Укажи вес и повторы; 0 кг — свой вес. Запас необязателен.')
+      setMessage('Укажи фактический вес или сопротивление и повторы. Запас необязателен.')
       return false
     }
     const exercise = draft.exercises.find((item) => item.id === exerciseId)
@@ -323,7 +338,7 @@ export function WorkoutPage() {
     setFinishing(true)
     try { enqueueDraft(completed) } catch { finishLock.current = false; setFinishing(false); setMessage('Не удалось сохранить результат на устройство. Тренировка остаётся открытой.'); return }
     // Local success is visible immediately, even if the server is slow or offline.
-    clearActiveDraft(completed.userId)
+    clearActiveDraft(completed.userId,completed.id,draft.updatedAt)
     if (navigator.onLine) void workoutSyncQueue.enqueue(completed).then(()=>{
       removeQueuedDraft(completed.userId,completed.id,completed.updatedAt)
       window.dispatchEvent(new CustomEvent('dostigator:training-sync-completed',{detail:{userId:completed.userId}}))
@@ -332,6 +347,11 @@ export function WorkoutPage() {
   }
 
   const cancelWorkout = async () => {
+    if (cancelLock.current) return
+    const latest=getActiveDraft(draft.userId)
+    if(latest && (latest.id!==draft.id || latest.updatedAt!==draft.updatedAt)) {
+      setMessage('Черновик обновился в другой вкладке. Проверь результат перед отменой.');setCancelOpen(false);return
+    }
     if (linkedCardio.length) {
       setMessage('Кардио уже связано с этой тренировкой. Заверши силовую либо сначала удали связанное кардио.');setCancelOpen(false);return
     }
@@ -340,23 +360,32 @@ export function WorkoutPage() {
       window.clearTimeout(autosaveTimerRef.current)
       autosaveTimerRef.current = null
     }
-    if (navigator.onLine) {
-      try {
-        await workoutSyncQueue.drain()
-        await deleteWorkoutSession(draft.id)
-      } catch { setMessage('Не удалось отменить тренировку на сервере. Черновик сохранён; проверь синхронизацию и связанные записи.');setCancelOpen(false);return }
+    cancelLock.current = true
+    setCancelling(true)
+    try {
+      archiveCancelledDraft(draft)
+      if (navigator.onLine) await workoutSyncQueue.cancel(draft.userId, draft.id, () => deleteWorkoutSession(draft.id,draft.userId))
+      else {
+        // Durable intent precedes removing the active pointer. The full draft remains archived.
+        enqueueCancelledWorkout(draft.userId, draft.id)
+        await workoutSyncQueue.cancel(draft.userId, draft.id, async () => undefined)
+      }
+      const retained=getActiveDraft(draft.userId)
+      if(retained?.id===draft.id) archiveCancelledDraft(retained)
+      clearActiveDraft(draft.userId,draft.id,retained?.updatedAt)
+      if (navigator.onLine) removeCancelledWorkout(draft.userId,draft.id)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Отмена не подтверждена. Черновик сохранён.')
+      setCancelling(false); cancelLock.current = false; setCancelOpen(false); return
     }
-    enqueueCancelledWorkout(draft.userId, draft.id)
-    clearActiveDraft(draft.userId)
-    if(navigator.onLine) removeCancelledWorkout(draft.userId,draft.id)
     navigate('/training', { replace: true })
   }
 
   const syncCopy: Record<SyncStatus, string> = {
-    local: 'Черновик на устройстве',
+    local: 'Сохранено на устройстве',
     syncing: 'Синхронизация…',
-    synced: 'Черновик синхронизирован',
-    offline: 'Офлайн · черновик сохранён',
+    synced: 'Сохранено в облаке',
+    offline: 'Офлайн · сохранено на устройстве',
     error: 'Не удалось синхронизировать',
   }
 
@@ -370,12 +399,13 @@ export function WorkoutPage() {
           <div className={`sync-status ${syncStatus}`}>{syncStatus === 'offline' ? <CloudOff /> : <Cloud />}<span>{syncCopy[syncStatus]}</span></div>
           <button className="icon-button danger-icon" type="button" onClick={() => setCancelOpen(true)} aria-label="Отменить тренировку"><Trash2 /></button>
         </div>
-        <div className="workout-session-title"><h1>{draft.title}</h1><button type="button" className="text-button" disabled={finishSummary.sets===0} onClick={()=>setFinishOpen(true)}>Завершить</button></div>
+        <div className="workout-session-title"><h1>{draft.title}</h1><button type="button" className="text-button" onClick={()=>setFinishOpen(true)}>Завершить</button></div>
         <WorkoutTimer draft={draft} now={now} onToggle={toggleTimer} />
       </header>
 
       {!draft.programRevision && template.programRevision && <p className="reduced-mode-banner">Продолжается прежний черновик. V2.1 будет использована при следующем старте.</p>}
       {storageFailed && <p className="error-card" role="alert">Не удалось сохранить черновик на устройстве. Не закрывай страницу.</p>}
+      {syncStatus === 'error' && syncError && <section className="sync-error-detail" role="alert"><p>{syncError}</p><button type="button" className="training-secondary" onClick={() => setSyncRetry(value => value + 1)}>Повторить синхронизацию</button></section>}
       <WorkoutSyncConflicts userId={draft.userId}/>
       {message && <div className="workout-message" role="alert">{message}</div>}
       {draft.readiness?.mode === 'reduced' && <div className="reduced-mode-banner"><strong>Облегчённый режим · без прибавки нагрузки</strong></div>}
@@ -463,9 +493,9 @@ export function WorkoutPage() {
         <BottomSheet title="Отменить тренировку?" onClose={() => setCancelOpen(false)}>
           <div className="finish-summary cancel-summary">
             <Trash2 />
-            <h3>Черновик будет удалён</h3>
-            <p className="muted">Уже синхронизированные строки этой незавершённой тренировки тоже будут удалены. Завершённая история не затрагивается.</p>
-            <button className="danger-button wide" type="button" onClick={() => void cancelWorkout()}>Отменить тренировку</button>
+            <h3>Отменить эту тренировку</h3>
+            <p className="muted">Уже синхронизированные строки этой незавершённой тренировки тоже будут удалены. Завершённая история не затрагивается. Локальная копия черновика останется на устройстве.</p>
+            <button className="danger-button wide" type="button" disabled={cancelling} onClick={() => void cancelWorkout()}>{cancelling ? 'Отменяем…' : 'Отменить тренировку'}</button>
             <button className="text-button" type="button" onClick={() => setCancelOpen(false)}>Продолжить тренировку</button>
           </div>
         </BottomSheet>

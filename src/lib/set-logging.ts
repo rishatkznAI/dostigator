@@ -21,7 +21,7 @@ export function recordSetAndPrepareNext(exercise: WorkoutExerciseDraft, submitte
     const validation = validateWorkoutSetValue(field, submitted[field])
     if (!validation.valid) throw new Error(validation.message)
   }
-  if (submitted.weightKg === null || submitted.reps === null) throw new Error('Укажи вес и результат; 0 кг — свой вес')
+  if (submitted.weightKg === null || submitted.reps === null) throw new Error('Укажи вес или сопротивление и результат')
   const recorded = { ...current, weightKg: submitted.weightKg, reps: submitted.reps, rir: submitted.rir, done: true, completedAt: current.completedAt ?? now.toISOString() }
   void reduced; void plannedNext
   return { ...exercise, sets: exercise.sets.map((set) => set.id === recorded.id ? recorded : set) }
@@ -38,5 +38,5 @@ export function skipSet(exercise: WorkoutExerciseDraft, setId: string): WorkoutE
 
 export function formatSetResult(set: Pick<WorkoutSetDraft, 'weightKg' | 'reps'>, timed: boolean) {
   if (set.reps === null) return 'Нет записи'
-  return timed ? `${set.reps} сек` : `${set.weightKg===null ? 'Вес не указан' : set.weightKg ? new Intl.NumberFormat('ru-RU').format(set.weightKg) + ' кг' : 'Свой вес'} × ${set.reps}`
+  return timed ? `${set.reps} сек` : `${set.weightKg===null ? 'Вес не указан' : set.weightKg ? new Intl.NumberFormat('ru-RU').format(set.weightKg) + ' кг' : 'Без доп. веса'} × ${set.reps}`
 }

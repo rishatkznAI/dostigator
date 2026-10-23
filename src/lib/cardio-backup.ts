@@ -19,6 +19,6 @@ export async function restoreCardioBackup(backup:CardioBackup,userId:string,impo
   parseCardioBackup(backup,userId)
   if(getCardioQueue(userId).length||getCardioDeletes(userId).length||getCardioConflicts(userId).length) throw new Error('Сначала синхронизируй текущие изменения кардио')
   const {data,error}=await supabase.rpc('cardio_restore_facts',{p_import_id:importId,p_records:backup.records})
-  if(error) throw new Error(error.code==='40001'?'Копия отличается от текущей истории. Восстановление кардио отменено целиком.':`Не удалось восстановить кардио: ${error.message}`)
+  if(error) throw new Error(['40001','PT409'].includes(error.code??'')?'Копия отличается от текущей истории. Восстановление кардио отменено целиком.':`Не удалось восстановить кардио: ${error.message}`)
   return data as {restored:number}
 }

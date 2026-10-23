@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enqueueDraft, getActiveDraft, getSyncQueue, removeQueuedDraft, saveActiveDraft } from '../src/lib/storage'
+import { clearActiveDraft, enqueueDraft, getActiveDraft, getSyncQueue, removeQueuedDraft, saveActiveDraft } from '../src/lib/storage'
 import type { WorkoutDraft } from '../src/types/training'
 
 const draft: WorkoutDraft = {
@@ -43,5 +43,24 @@ describe('offline drafts', () => {
     expect(getSyncQueue('user-a')[0]?.finishedAt).toBe('2026-08-25T11:00:00Z')
     removeQueuedDraft('user-a', draft.id)
     expect(getSyncQueue('user-a')).toEqual([])
+  })
+
+  it('retains a newer active workout when an older cancellation completes',()=>{
+    const newer={...draft,id:crypto.randomUUID()}
+    saveActiveDraft(newer)
+    clearActiveDraft(draft.userId,draft.id,draft.updatedAt)
+    expect(getActiveDraft(draft.userId)).toEqual(newer)
+  })
+
+  it('retains a newer edit and a completed queue snapshot over stale writers',()=>{
+    localStorage.clear()
+    const newer={...draft,updatedAt:'2026-08-25T10:06:00Z'}
+    saveActiveDraft(newer);clearActiveDraft(draft.userId,draft.id,draft.updatedAt)
+    expect(getActiveDraft(draft.userId)).toEqual(newer)
+    enqueueDraft(newer);enqueueDraft(draft)
+    expect(getSyncQueue(draft.userId)).toEqual([newer])
+    const completed={...newer,finishedAt:'2026-08-25T11:00:00Z'}
+    enqueueDraft(completed);enqueueDraft({...newer,updatedAt:'2026-08-25T12:00:00Z'})
+    expect(getSyncQueue(draft.userId)).toEqual([completed])
   })
 })

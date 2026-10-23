@@ -145,9 +145,9 @@ export function syncCardio(userId:string):Promise<void> {
         }
       }
       const {data,error}=await supabase.rpc('cardio_apply_fact',{p_id:id,p_mutation_id:session?.mutation_id??meta[id].mutation_id,
-        p_expected_revision:session?.revision??meta[id]?.revision??0,p_record:payload,p_delete:Boolean(deleting)})
+        p_expected_revision:session?.revision??meta[id]?.revision??0,p_record:payload,p_delete:Boolean(deleting),p_expected_owner:userId})
       if(error) {
-        if(error.code==='40001') {
+        if(['40001','PT409'].includes(error.code??'')) {
           let remote:CardioSession|null=null
           try { const parsed=JSON.parse(error.details??'null'); if(parsed?.id===id)remote=parsed }catch{/* fetch below */}
           if(!remote) { const result=await supabase.rpc('cardio_list_facts',{p_include_deleted:true}); if(result.error)throw new Error('Не удалось прочитать конфликтующую версию. Локальная запись сохранена.'); remote=((result.data??[]) as unknown as CardioSession[]).find(r=>r.id===id)??null }

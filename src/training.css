@@ -1014,3 +1014,12 @@ body.modal-open { overflow: hidden; }
  .training-module .training-stepper button { min-width: 36px; }
 }
 @media(prefers-reduced-motion: reduce) { .training-module * { scroll-behavior: auto !important; } }
+
+.training-module .sync-error-detail { margin: 12px; padding: 12px; border: 1px solid #7c6635; border-radius: 12px; background: #292417; }
+.training-module .sync-error-detail p { margin: 0 0 8px; font-size: 13px; line-height: 1.5; }
+.training-module .workout-message { position: static; margin: 12px; }
+@media (max-height: 540px) {
+  .training-module .workout-page .workout-header { position: static; }
+  .training-module .workout-current-action { scroll-margin-top: 12px; }
+  .training-module .active-set-inputs input { scroll-margin-top: 24px; }
+}

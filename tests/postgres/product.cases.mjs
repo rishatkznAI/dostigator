@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 
 export async function productCases(admin, asUser, ownerA, ownerB, peer) {
   const call = (owner, id, revision, record, deleted = false, mutation = randomUUID(),client=admin) => asUser(client, owner,
-    'select public.cardio_apply_fact($1,$2,$3,$4::jsonb,$5) as result', [id,mutation,revision,JSON.stringify(record),deleted])
+    'select public.cardio_apply_fact($1,$2,$3,$4::jsonb,$5,$6) as result', [id,mutation,revision,JSON.stringify(record),deleted,owner])
   const fact = (seconds, workout = null) => ({activity_date:'2026-10-21',kind:'walk',duration_minutes:Math.floor(seconds/60),
     duration_seconds:seconds,workout_session_id:workout,distance_km:null,effort:null,average_pulse:null,
     speed_kmh:5.5,incline_percent:3,resistance_level:null,note:'Exact test'})
@@ -47,7 +47,7 @@ export async function productCases(admin, asUser, ownerA, ownerB, peer) {
   for(const table of ['cardio_facts','private.training_requests']) {
     assert.equal((await admin.query('select has_table_privilege($1,$2,$3) as allowed',['anon',table,'select'])).rows[0].allowed,false)
   }
-  assert.equal((await admin.query("select has_function_privilege('anon','public.cardio_apply_fact(uuid,uuid,bigint,jsonb,boolean)','execute') as allowed")).rows[0].allowed,false)
+  assert.equal((await admin.query("select has_function_privilege('anon','public.cardio_apply_fact(uuid,uuid,bigint,jsonb,boolean,uuid)','execute') as allowed")).rows[0].allowed,false)
 
   const sid=randomUUID(), eid=randomUUID(), setid=randomUUID()
   const session={id:sid,template_code:'A',title:'Atomic test',started_at:'2026-10-21T10:00:00Z',finished_at:null,
@@ -56,7 +56,7 @@ export async function productCases(admin, asUser, ownerA, ownerB, peer) {
   const ex=[{id:eid,session_id:sid,exercise_key:null,exercise_name:'Synthetic',target:'8–12',sort_order:1,skipped:false,skip_reason:'',note:''}]
   const sets=[{id:setid,session_id:sid,session_exercise_id:eid,set_number:1,weight_kg:10,reps:9,rir:null,done:true,is_warmup:false,completed_at:'2026-10-21T10:02:00Z'}]
   const workout=(rev,s=session,e=ex,t=sets,m=randomUUID(),owner=ownerA)=>asUser(admin,owner,
-    'select public.training_save_workout($1,$2,$3,$4,$5) as result',[m,rev,JSON.stringify(s),JSON.stringify(e),JSON.stringify(t)])
+    'select public.training_save_workout($1,$2,$3,$4,$5,ARRAY[]::uuid[],$6) as result',[m,rev,JSON.stringify(s),JSON.stringify(e),JSON.stringify(t),owner])
   await assert.rejects(()=>workout(0,session,ex,[{...sets[0],session_exercise_id:randomUUID()}]),/foreign key/)
   assert.equal((await admin.query('select id from public.workout_sessions where id=$1',[sid])).rowCount,0,'failure rolls back the whole graph')
   await workout(0)
@@ -84,8 +84,21 @@ export async function productCases(admin, asUser, ownerA, ownerB, peer) {
   assert.equal((await admin.query('select id from public.cardio_facts where id=$1',[missingId])).rowCount,0,'restore is atomic')
   const cancelId=randomUUID(),cancelSession={...session,id:cancelId}
   await workout(0,cancelSession,[],[])
-  await asUser(admin,ownerA,'select public.training_cancel_workout($1,$2,1)',[cancelId,randomUUID()])
+  await asUser(admin,ownerA,'select public.training_cancel_workout($1,$2,1,$3)',[cancelId,randomUUID(),ownerA])
   await assert.rejects(()=>workout(0,cancelSession,[],[]),/Workout cancelled/)
+  await assert.rejects(()=>asUser(admin,ownerA,"insert into public.workout_sessions(id,title,template_code) values($1,'Late legacy writer','A')",[cancelId]),/Workout cancelled/)
+  const concurrentId=randomUUID()
+  await workout(0,{...session,id:concurrentId},[],[])
+  await peer.query('begin')
+  await peer.query('set local role authenticated')
+  await peer.query("select set_config('request.jwt.claim.sub',$1,true)",[ownerA])
+  await peer.query('select public.training_cancel_workout($1,$2,1,$3)',[concurrentId,randomUUID(),ownerA])
+  const late=asUser(admin,ownerA,"insert into public.workout_sessions(id,title,template_code) values($1,'Concurrent stale client','A')",[concurrentId])
+  const rejected=assert.rejects(()=>late,/Workout cancelled/)
+  await peer.query('commit');await rejected
+  assert.equal((await admin.query('select id from workout_sessions where id=$1',[concurrentId])).rowCount,0)
+  await assert.rejects(()=>asUser(admin,ownerB,'select public.training_save_workout($1,0,$2,\'[]\',\'[]\',\'{}\',$3)',[randomUUID(),JSON.stringify({...session,id:randomUUID()}),ownerA]),/owner changed/)
+  await assert.rejects(()=>asUser(admin,ownerB,'select public.training_cancel_workout($1,$2,0,$3)',[randomUUID(),randomUUID(),ownerA]),/owner changed/)
   const legacyParent=randomUUID()
   await asUser(admin,ownerA,"insert into public.workout_sessions(id,title,template_code) values($1,'Legacy active','A')",[legacyParent])
   const legacyParentTime=(await admin.query('select updated_at::text as stamp from public.workout_sessions where id=$1',[legacyParent])).rows[0].stamp

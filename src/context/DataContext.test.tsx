@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DataProvider, useData } from './DataContext'
 import type { AppData } from '../types'
@@ -53,6 +53,17 @@ describe('account-scoped data state', () => {
     mocks.queueStats.mockReset().mockReturnValue({ pending: 0, failed: 0, quarantined: 0, legacyQuarantined: false })
     mocks.flushQueue.mockReset().mockResolvedValue({ completed: 0, pending: 0, failed: 0, quarantined: 0, legacyQuarantined: false })
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+  })
+
+  it('refreshes a stale cache banner when the app returns to the foreground', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
+    function Status() { const { error } = useData(); return <p>{error ?? 'Обновлено'}</p> }
+    render(<DataProvider><Probe /><Status /></DataProvider>)
+    await screen.findByText('offline')
+    mocks.loadAppData.mockResolvedValue({ ...userData('user-a'), goals: [{ ...userData('user-a').goals[0], title: 'Свежие данные' }] })
+    fireEvent(window, new Event('focus'))
+    await screen.findByText('Свежие данные · 0/0')
+    expect(screen.getByText('Обновлено')).toBeInTheDocument()
   })
 
   it('never writes or renders account A data as account B during a direct session change', async () => {

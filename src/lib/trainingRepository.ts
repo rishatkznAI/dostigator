@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { getCancelQueue } from './storage'
+import { trainingSyncError } from './training-sync-error'
 import type {
   BodyMeasurement,
   DailyActivity,
@@ -17,6 +19,8 @@ import { selectPreviousResults } from './workout-targets'
 import { storeWorkoutConflict } from './workout-conflicts'
 
 type QueryError = { message: string }
+
+const sameTimestamp = (actual: unknown, expected: unknown) => expected === null ? actual === null : typeof actual === 'string' && typeof expected === 'string' && Number.isFinite(Date.parse(expected)) && Date.parse(actual) === Date.parse(expected)
 
 const fail = (context: string, error: QueryError | null) => {
   if (error) throw new Error(`${context}: ${error.message}`)
@@ -95,12 +99,16 @@ export async function loadPreviousResults(exerciseKeys: string[], before?: strin
 }
 
 export async function syncWorkoutDraft(draft: WorkoutDraft): Promise<void> {
+  const identity = await supabase.auth.getUser()
+  if (identity.error) throw trainingSyncError([401,403].includes(identity.error.status ?? 0) ? { code: '42501' } : {})
+  if (identity.data.user?.id !== draft.userId) throw new Error('Аккаунт изменился. Черновик сохранён в исходном профиле и не отправлен.')
   const cloudKey = `trainlog:workout-cloud:${draft.userId}:${draft.id}`
-  const state = JSON.parse(localStorage.getItem(cloudKey) ?? '{}') as {revision?:number;updatedAt?:string;legacyUpdatedAt?:string;finishedAt?:string|null;request?:{stamp:string;mutation:string;revision:number;payload:Record<string,unknown>}}
+  const state = JSON.parse(localStorage.getItem(cloudKey) ?? '{}') as {cancelled?:boolean;revision?:number;updatedAt?:string;legacyUpdatedAt?:string;finishedAt?:string|null;request?:{stamp:string;mutation:string;revision:number;payload:Record<string,unknown>}}
+  if (getCancelQueue(draft.userId).includes(draft.id) || state.cancelled) throw new Error('Тренировка отменена или ожидает отмены. Локальная копия сохранена.')
   if (state.updatedAt && Date.parse(draft.updatedAt)<=Date.parse(state.updatedAt)) return
   if (state.finishedAt) throw new Error('Тренировка уже завершена на сервере. Локальный ввод сохранён.')
   const session = {
-    id:draft.id,template_code:draft.templateCode,title:draft.title,started_at:draft.startedAt,finished_at:draft.finishedAt,legacy_updated_at:state.legacyUpdatedAt??null,
+    id:draft.id,user_id:draft.userId,template_code:draft.templateCode,title:draft.title,started_at:draft.startedAt,finished_at:draft.finishedAt,legacy_updated_at:state.legacyUpdatedAt??null,
     timer_paused_at:draft.timerPausedAt,timer_paused_duration_ms:draft.timerPausedDurationMs,
     readiness_sleep:draft.readiness?.sleep??null,readiness_energy:draft.readiness?.energy??null,readiness_stress:draft.readiness?.stress??null,
     readiness_discomfort:draft.readiness?.discomfort??false,readiness_mode:draft.readiness?.mode??null,readiness_note:draft.readiness?.note??'',note:'',
@@ -133,26 +141,40 @@ export async function syncWorkoutDraft(draft: WorkoutDraft): Promise<void> {
   const request = state.request ?? {stamp:draft.updatedAt,mutation:crypto.randomUUID(),revision:state.revision??0,
     payload:{p_session:session,p_exercises:exerciseRows,p_sets:setRows,p_deleted_set_ids:draft.deletedSetIds}}
   localStorage.setItem(cloudKey,JSON.stringify({...state,request}))
-  const {data,error} = await supabase.rpc('training_save_workout',{...request.payload,p_mutation_id:request.mutation,p_expected_revision:request.revision})
+  const {data,error} = await supabase.rpc('training_save_workout',{...request.payload,p_mutation_id:request.mutation,p_expected_revision:request.revision,p_expected_owner:draft.userId})
   if(error) {
-    if(error.code==='40001') storeWorkoutConflict(draft,error.details)
-    throw new Error(error.code==='40001'?'Тренировка изменилась на сервере. Локальный ввод сохранён; сравни версии перед повтором.':`Не удалось синхронизировать тренировку: ${error.message}`)
+    if(['40001','PT409'].includes(error.code??'')) storeWorkoutConflict(draft,error.details)
+    throw trainingSyncError(error)
   }
-  if(!data || data.id!==draft.id || !data.revision) throw new Error('Сервер не подтвердил тренировку')
+  if(!data || data.id!==draft.id || !Number.isSafeInteger(data.revision) || data.revision!==request.revision+1 || !sameTimestamp(data.finished_at,(request.payload.p_session as {finished_at:string|null}).finished_at)) throw new Error('Сервер не подтвердил тренировку')
   localStorage.setItem(cloudKey,JSON.stringify({revision:data.revision,updatedAt:request.stamp,finishedAt:data.finished_at}))
   if(request.stamp!==draft.updatedAt) await syncWorkoutDraft(draft)
 
 }
 
-export async function deleteWorkoutSession(id: string): Promise<void> {
+export async function deleteWorkoutSession(id: string, expectedOwner?: string): Promise<void> {
   const auth=await supabase.auth.getUser()
   const owner=auth.data.user?.id
   if(!owner) throw new Error('Требуется вход в аккаунт')
-  const state=JSON.parse(localStorage.getItem(`trainlog:workout-cloud:${owner}:${id}`)??'{}')
+  if(expectedOwner && owner!==expectedOwner) throw new Error('Аккаунт изменился. Отмена сохранена в исходном профиле.')
+  const cloudKey=`trainlog:workout-cloud:${owner}:${id}`
+  let state=JSON.parse(localStorage.getItem(cloudKey)??'{}')
+  if(state.cancelled) return
+  // A timed-out autosave may have committed. Replay its exact request before CAS cancellation.
+  if(state.request) {
+    const request=state.request
+    const {data,error}=await supabase.rpc('training_save_workout',{...request.payload,p_mutation_id:request.mutation,p_expected_revision:request.revision,p_expected_owner:owner})
+    if(error) throw trainingSyncError(error)
+    if(!data || data.id!==id || data.revision!==request.revision+1 || !sameTimestamp(data.finished_at,(request.payload.p_session as {finished_at:string|null}).finished_at)) throw new Error('Сервер не подтвердил состояние перед отменой. Черновик сохранён.')
+    state={revision:data.revision,updatedAt:request.stamp,finishedAt:data.finished_at}
+    localStorage.setItem(cloudKey,JSON.stringify(state))
+  }
   const key=`trainlog:workout-cancel:${owner}:${id}`
   const mutation=localStorage.getItem(key)??crypto.randomUUID();localStorage.setItem(key,mutation)
-  const result=await supabase.rpc('training_cancel_workout',{p_id:id,p_mutation_id:mutation,p_expected_revision:state.revision??0})
-  fail('Не удалось отменить тренировку',result.error)
+  const result=await supabase.rpc('training_cancel_workout',{p_id:id,p_mutation_id:mutation,p_expected_revision:state.revision??0,p_expected_owner:owner})
+  if(result.error) throw trainingSyncError(result.error)
+  if(result.data?.id!==id || result.data.cancelled!==true) throw new Error('Сервер не подтвердил отмену. Черновик сохранён.')
+  localStorage.setItem(cloudKey,JSON.stringify({...state,cancelled:true}))
 }
 
 export async function loadMeasurements(): Promise<BodyMeasurement[]> {

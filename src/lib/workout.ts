@@ -173,7 +173,7 @@ export function getWeeklyStats(history: HistoryWorkout[], now = new Date()): Wee
 }
 
 export function formatSet(set: WorkoutSetDraft) {
-  const weight = set.weightKg===null ? 'вес не указан' : set.weightKg ? `${formatWeight(set.weightKg)} кг` : 'свой вес'
+  const weight = set.weightKg===null ? 'вес не указан' : set.weightKg ? `${formatWeight(set.weightKg)} кг` : 'без доп. веса'
   return `${weight} × ${set.reps ?? '—'}${set.rir === null ? '' : ` · RIR ${set.rir}`}`
 }
 
