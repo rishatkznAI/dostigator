@@ -31,7 +31,7 @@ describe('exercise card', () => {
   it('shows previous result and database-backed instructions', () => {
     render(<ExerciseCard exercise={exercise} previous={previous} onRecordSet={vi.fn()} onUndoSet={vi.fn()} onSkipSet={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
     expect(screen.getAllByText(/60 кг × 12/)[0]).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Техника, отдых и изменение упражнения'))
+    fireEvent.click(screen.getByText('Разминка, отдых и замена упражнения'))
     expect(screen.getByText(/Отдых: 2 мин/)).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Стартовые ориентиры веса' })).toHaveTextContent(/25 кг.*40 кг.*50 кг/)
     const opener = screen.getByRole('button', { name: 'Как делать' })
