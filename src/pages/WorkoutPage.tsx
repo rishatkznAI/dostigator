@@ -406,7 +406,7 @@ export function WorkoutPage() {
       {!draft.programRevision && template.programRevision && <p className="reduced-mode-banner">Продолжается прежний черновик. V2.1 будет использована при следующем старте.</p>}
       {storageFailed && <p className="error-card" role="alert">Не удалось сохранить черновик на устройстве. Не закрывай страницу.</p>}
       {syncStatus === 'error' && syncError && <section className="sync-error-detail" role="alert"><p>{syncError}</p><button type="button" className="training-secondary" onClick={() => setSyncRetry(value => value + 1)}>Повторить синхронизацию</button></section>}
-      <WorkoutSyncConflicts userId={draft.userId}/>
+      <WorkoutSyncConflicts userId={draft.userId} currentWorkoutId={draft.id} />
       {message && <div className="workout-message" role="alert">{message}</div>}
       {draft.readiness?.mode === 'reduced' && <div className="reduced-mode-banner"><strong>Облегчённый режим · без прибавки нагрузки</strong></div>}
       <section className="workout-progress-panel" aria-label="Прогресс тренировки">
@@ -456,9 +456,9 @@ export function WorkoutPage() {
       </div>
       </div>
       {exercisePickerOpen && <BottomSheet title="Упражнения тренировки" onClose={()=>setExercisePickerOpen(false)}><div className="choice-list workout-exercise-picker">{draft.exercises.map((exercise,index)=><button key={exercise.id} type="button" aria-current={exercise.id===activeExerciseId?'step':undefined} onClick={()=>{selectExercise(exercise.id);setExercisePickerOpen(false)}}><span><strong>{index+1}. {exercise.exercise.name}</strong><small>{exercise.skipped?'Пропущено':`${exercise.sets.filter(set=>set.done&&!set.isWarmup).length} из ${exercise.sets.filter(set=>!set.isWarmup).length} записано`}</small></span></button>)}</div></BottomSheet>}
-      <details className="training-extras workout-options"><summary>Настройки тренировки</summary><label className="training-toggle"><input type="checkbox" checked={autoRest} onChange={(event) => { setAutoRest(event.target.checked); localStorage.setItem(`trainlog:auto-rest:${draft.userId}`, String(event.target.checked)) }} />Запускать отдых после записи</label><details><summary>Оценить самочувствие · необязательно</summary><ReadinessCheck submitLabel="Обновить самочувствие" onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} /></details></details>
+      <details className="training-extras workout-options"><summary><span><strong>Отдых и самочувствие</strong><small>{autoRest ? 'Автоотдых включён' : 'Автоотдых выключен'} · оценка готовности</small></span></summary><label className="training-toggle"><input type="checkbox" checked={autoRest} onChange={(event) => { setAutoRest(event.target.checked); localStorage.setItem(`trainlog:auto-rest:${draft.userId}`, String(event.target.checked)) }} />Автоматически запускать отдых после подхода</label><details className="training-extras workout-readiness"><summary>Изменить оценку самочувствия</summary><ReadinessCheck submitLabel="Обновить самочувствие" onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} /></details></details>
 
-      <Link className="workout-cardio-link" to="/training/cardio"><HeartPulse /><span><strong>Кардио</strong><small>Таймер или ручная запись времени. Силовой черновик сохранён.</small></span></Link>
+      <Link className="workout-cardio-link" to="/training/cardio"><HeartPulse /><span><strong>Добавить кардио</strong><small>Включить таймер или записать время вручную. Силовая тренировка останется сохранённой.</small></span></Link>
 
 
 
