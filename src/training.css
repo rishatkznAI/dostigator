@@ -1023,3 +1023,145 @@ body.modal-open { overflow: hidden; }
   .training-module .workout-current-action { scroll-margin-top: 12px; }
   .training-module .active-set-inputs input { scroll-margin-top: 24px; }
 }
+
+
+/* Mobile UX audit (2026-10-23): make optional actions look clickable and
+   isolate long cloud-conflict content from the generic flex error banner. */
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options) > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 62px;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #3a3d48;
+  border-radius: 14px;
+  background: #191b23;
+  color: #f4f5f8;
+  list-style: none;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options) > summary::-webkit-details-marker { display: none; }
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options) > summary::after {
+  content: '⌄';
+  display: grid;
+  flex: 0 0 26px;
+  place-items: center;
+  color: var(--accent);
+  font-size: 25px;
+  line-height: 1;
+  transition: transform .18s ease;
+}
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options)[open] > summary::after { transform: rotate(180deg); }
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options) > summary > span { display: grid; min-width: 0; gap: 3px; }
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options) > summary strong { font-size: 14px; font-weight: 800; line-height: 1.35; color: #f4f5f8; }
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options) > summary small { font-size: 12px; font-weight: 400; line-height: 1.45; color: #b7becb; }
+.training-module .training-extras:is(.set-advanced, .exercise-tools, .workout-options)[open] > summary { border-color: #9b783c; border-radius: 14px 14px 10px 10px; }
+.training-module .training-extras.set-advanced { margin: 18px 0 12px; }
+.training-module .training-extras.exercise-tools { margin: 12px 14px 16px; }
+.training-module .training-extras.workout-options { margin: 18px 12px; }
+.training-module .workout-options > .training-toggle { margin: 16px 4px; line-height: 1.45; }
+.training-module .workout-readiness > summary { color: var(--accent); padding: 10px; }
+
+.training-module .workout-conflict-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  margin: 12px;
+  padding: 12px 14px;
+  border: 1px solid #765f35;
+  border-radius: 13px;
+  background: #292318;
+  color: #f6d492;
+  overflow-wrap: anywhere;
+}
+.training-module .workout-conflict-notice > div { flex: 1 1 210px; min-width: 0; }
+.training-module .workout-conflict-notice strong { font-size: 13px; line-height: 1.4; }
+.training-module .workout-conflict-notice p { margin: 4px 0 0; color: #d3c9b8; font-size: 12px; line-height: 1.45; }
+.training-module .workout-conflict-notice a { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); font-size: 13px; font-weight: 800; }
+.training-module .workout-conflict {
+  display: block;
+  width: auto;
+  min-width: 0;
+  margin: 12px;
+  padding: 14px;
+  border: 1px solid #794546;
+  border-radius: 16px;
+  background: #24191b;
+  color: #ffd0cb;
+  overflow-wrap: anywhere;
+}
+.training-module .workout-conflict-heading { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: start; gap: 10px; }
+.training-module .workout-conflict-heading > svg { color: #ffaaa4; margin-top: 2px; }
+.training-module .workout-conflict-heading h2 { margin: 0 0 5px; font-size: 16px; line-height: 1.35; color: #ffc2bd; }
+.training-module .workout-conflict-heading p { margin: 0; font-size: 13px; line-height: 1.5; color: #edc6c2; }
+.training-module .workout-conflict-details { min-width: 0; margin-top: 12px; }
+.training-module .workout-conflict-details > summary {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid #835b57;
+  border-radius: 12px;
+  background: #302022;
+  color: #fff3f1;
+  font-size: 13px;
+  font-weight: 750;
+  list-style: none;
+  cursor: pointer;
+}
+.training-module .workout-conflict-details > summary::-webkit-details-marker { display: none; }
+.training-module .workout-conflict-details > summary svg { flex-shrink: 0; transition: transform .18s ease; }
+.training-module .workout-conflict-details[open] > summary svg { transform: rotate(180deg); }
+.training-module .workout-conflict-versions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.training-module .workout-conflict-versions > section { min-width: 0; padding: 12px; border: 1px solid #66484b; border-radius: 12px; background: #1a171c; }
+.training-module .workout-conflict-versions h3 { margin: 0 0 10px; color: #f1d5d2; font-size: 13px; line-height: 1.45; }
+.training-module .workout-conflict-exercise { padding-top: 8px; border-top: 1px solid #49393d; }
+.training-module .workout-conflict-exercise strong { font-size: 12px; color: #f1f0f1; line-height: 1.5; }
+.training-module .workout-conflict-exercise p { margin: 4px 0 8px; font-size: 12px; line-height: 1.5; }
+.training-module .workout-conflict-actions { display: grid; gap: 4px; margin: 10px 0 0; }
+.training-module .workout-conflict-actions p,
+.training-module .workout-conflict-hint,
+.training-module .workout-conflict-feedback { margin: 8px 0; font-size: 12px; line-height: 1.5; }
+.training-module .workout-conflict-actions button,
+.training-module .workout-conflict-backup { width: 100%; min-width: 0; min-height: 48px; margin: 5px 0; padding: 10px 12px; white-space: normal; text-align: center; overflow-wrap: anywhere; }
+.training-module .workout-conflict-backup { border-color: #806e6b; }
+@media (max-width: 540px) {
+  .training-module .workout-conflict-versions { grid-template-columns: minmax(0, 1fr); }
+  .training-module .workout-conflict-actions { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 380px) {
+  .training-module .workout-session-title { gap: 4px; }
+  .training-module .workout-session-title .text-button { font-size: 13px; }
+  .training-module .active-set-inputs { grid-template-columns: minmax(0, .8fr) minmax(0, 1.5fr); gap: 5px; }
+  .training-module .training-stepper { grid-template-columns: 36px minmax(0, 1fr) 36px; }
+  .training-module .training-record-button { font-size: 16px; overflow-wrap: anywhere; padding: 12px; }
+}
+
+
+/* The same flex error-card was also used for multi-action cardio conflicts. */
+.training-module .error-card { flex-wrap: wrap; overflow-wrap: anywhere; }
+.training-module .error-card > :is(h2, h3, p, span, div) { min-width: 0; }
+.training-module .error-card.cardio-conflict {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  justify-items: stretch;
+  margin-top: 12px;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.training-module .cardio-conflict h3 { margin: 0; color: #ffb4af; font-size: 16px; line-height: 1.35; }
+.training-module .cardio-conflict p { margin: 0; overflow-wrap: anywhere; }
+.training-module .cardio-conflict .training-secondary { min-width: 0; margin: 4px 0 0; white-space: normal; overflow-wrap: anywhere; }

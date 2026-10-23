@@ -53,7 +53,7 @@ describe('focused set entry', () => {
   })
   it('skips and restores an unperformed set without a fake completion', () => {
     render(<Harness />)
-    fireEvent.click(screen.getByText('Дополнительно'))
+    fireEvent.click(screen.getByText('Оценка нагрузки и действия с подходом'))
     fireEvent.click(screen.getByRole('button', { name: 'Пропустить этот подход' }))
     expect(facts()[0]).toMatchObject({ skipped: true, done: false, completedAt: null })
     expect(screen.getByRole('spinbutton', { name: /подход 2, вес/ })).toBeInTheDocument()

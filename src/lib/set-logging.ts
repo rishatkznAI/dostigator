@@ -38,5 +38,5 @@ export function skipSet(exercise: WorkoutExerciseDraft, setId: string): WorkoutE
 
 export function formatSetResult(set: Pick<WorkoutSetDraft, 'weightKg' | 'reps'>, timed: boolean) {
   if (set.reps === null) return 'Нет записи'
-  return timed ? `${set.reps} сек` : `${set.weightKg===null ? 'Вес не указан' : set.weightKg ? new Intl.NumberFormat('ru-RU').format(set.weightKg) + ' кг' : 'Без доп. веса'} × ${set.reps}`
+  return timed ? `${set.reps} сек` : `${set.weightKg===null ? 'Вес не указан' : set.weightKg ? new Intl.NumberFormat('ru-RU').format(set.weightKg) + ' кг' : '0 кг'} × ${set.reps}`
 }

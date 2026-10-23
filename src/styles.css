@@ -590,3 +590,11 @@ input:focus, textarea:focus, select:focus { border-color: #8c7537; box-shadow: 0
   .bottom-nav .nav-label { font-size: 0; }
   .bottom-nav .nav-label::after { content: attr(data-short-label); font-size: .75rem; }
 }
+
+
+/* Seven destinations must not collide at standard 375–430px iPhone widths.
+   Full names remain available to assistive technology via aria-label. */
+@media (min-width: 361px) and (max-width: 430px) {
+  .bottom-nav .nav-label { font-size: 0; }
+  .bottom-nav .nav-label::after { content: attr(data-short-label); font-size: .66rem; }
+}
