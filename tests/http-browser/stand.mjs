@@ -6,6 +6,8 @@ import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import EmbeddedPostgres from 'embedded-postgres'
 import { bootstrap } from './bootstrap.sql.mjs'
+const origin=process.env.DOSTIGATOR_TEST_ORIGIN || 'http://127.0.0.1:4210'
+const authStorageKey='sb-'+new URL(origin).hostname.split('.')[0]+'-auth-token'
 const ownerA='10000000-0000-4000-8000-000000000001',ownerB='20000000-0000-4000-8000-000000000002'
 const root=await mkdtemp(join(tmpdir(),'dostigator-http-'))
 const postgres=new EmbeddedPostgres({databaseDir:join(root,'db'),user:'postgres',password:'isolated-test',port:56219,persistent:false,onLog:()=>{},onError:()=>{}})
@@ -20,7 +22,7 @@ const secret=randomBytes(48).toString('hex')
 const token=(sub,role='authenticated')=>{const body=[{alg:'HS256',typ:'JWT'},{role,sub,aud:'authenticated',iss:'isolated-test',exp:Math.floor(Date.now()/1000)+86400}].map(x=>Buffer.from(JSON.stringify(x)).toString('base64url')).join('.');return body+'.'+createHmac('sha256',secret).update(body).digest('base64url')}
 const tokens={ownerA:token(ownerA),ownerB:token(ownerB),anon:token(undefined,'anon')}
 await writeFile(join(root,'postgrest.conf'),`db-uri = "postgres://authenticator:test-api@127.0.0.1:56219/postgres"\ndb-schemas = "public"\ndb-anon-role = "anon"\njwt-secret = "${secret}"\nserver-port = 4212\nserver-host = "127.0.0.1"\n`)
-const postgrest=spawn('/opt/homebrew/bin/postgrest',[join(root,'postgrest.conf')],{stdio:['ignore','ignore','pipe']});postgrest.stderr.on('data',d=>process.stderr.write(d))
+const postgrest=spawn(process.env.POSTGREST_BIN || 'postgrest',[join(root,'postgrest.conf')],{stdio:['ignore','ignore','pipe']});postgrest.stderr.on('data',d=>process.stderr.write(d))
 let mode='online',lost=false
 const lanBootstrap=await readFile('tools/phone-preview/mobile-preview-bootstrap.js','utf8')
 const user={id:ownerA,aud:'authenticated',role:'authenticated',email:'isolated@local.test',app_metadata:{provider:'test-fixture'},user_metadata:{display_name:'Изолированный тест'},created_at:'2026-10-22T00:00:00Z'}
@@ -28,7 +30,7 @@ const fixture={access_token:tokens.ownerA,refresh_token:'fixture-no-cloud-auth',
 const server=createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://localhost');res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Headers','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,PATCH,DELETE,OPTIONS');
  if(req.method==='OPTIONS'){res.writeHead(204);res.end();return}
- if(url.pathname==='/__test/login') {res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<script>localStorage.setItem('sb-192-auth-token',${JSON.stringify(JSON.stringify(fixture))});localStorage.setItem('dostigator:onboarding:v1:${ownerA}','skipped');location.replace('/training')</script>`);return}
+ if(url.pathname==='/__test/login') {res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<script>localStorage.setItem(${JSON.stringify(authStorageKey)},${JSON.stringify(JSON.stringify(fixture))});localStorage.setItem('dostigator:onboarding:v1:${ownerA}','skipped');location.replace('/training')</script>`);return}
  if(url.pathname==='/__test/mode') {mode=url.searchParams.get('value')??'online';lost=false;res.end(mode);return}
  if(url.pathname==='/__test/identities') {res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ownerA,ownerB,tokens}));return}
  if(url.pathname==='/__test/counts') {res.setHeader('Content-Type','application/json');res.end(JSON.stringify((await admin.query(`select (select count(*)::int from workout_sessions) sessions,(select count(*)::int from workout_sets where done) done_sets,(select count(*)::int from cardio_facts where deleted_at is null) cardio,(select count(*)::int from private.training_deleted_sessions) cancelled`)).rows[0]));return}
@@ -47,6 +49,6 @@ const server=createServer(async(req,res)=>{try{
  if(response.headers.get('content-type')?.includes('text/html'))content=Buffer.from(content.toString().replace('<head>',`<head><script>${lanBootstrap}</script>`).replace('<body>','<body><div style="background:#51431c;color:white;padding:8px;font:12px sans-serif">Изолированный стенд · настоящая БД/API · вход тестовый · production не используется</div>'))
  res.writeHead(response.status,{'Content-Type':response.headers.get('content-type')??'text/plain'});res.end(content)
 }catch(error){res.writeHead(502);res.end(JSON.stringify({message:error.message}))}})
-server.listen(4210,'0.0.0.0',()=>console.log('Isolated HTTP stand http://192.168.1.137:4210/__test/login'))
+server.listen(4210,process.env.DOSTIGATOR_TEST_BIND || '127.0.0.1',()=>console.log('Isolated HTTP stand '+origin+'/__test/login'))
 async function stop(){server.close();postgrest.kill();await admin.end();await postgres.stop();await rm(root,{recursive:true,force:true});process.exit()}
 process.on('SIGTERM',stop);process.on('SIGINT',stop)

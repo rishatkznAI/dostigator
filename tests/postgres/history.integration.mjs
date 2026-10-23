@@ -9,6 +9,7 @@ import { journalCases } from './journal.cases.mjs'
 import { trainingUxCases } from './training-ux.cases.mjs'
 import { cardioCases } from './cardio.cases.mjs'
 import { productCases } from './product.cases.mjs'
+import { correctionCases } from './corrections.cases.mjs'
 import { v21Cases } from './v21.cases.mjs'
 
 const ownerA = '10000000-0000-4000-8000-000000000001'
@@ -166,6 +167,7 @@ try {
   const productPeer=postgres.getPgClient();clients.push(productPeer);await productPeer.connect()
   await productCases(admin, asUser, ownerA, ownerB, productPeer)
   await v21Cases(admin, asUser, ownerA)
+  await correctionCases(admin, asUser, ownerA, ownerB)
   if(process.env.DOSTIGATOR_RUN_ADVISORS==='1') {
     const check=spawnSync('npx',['--yes','supabase@2.121.0','db','advisors','--db-url',`postgresql://postgres:dostigator-test@127.0.0.1:${port}/postgres?sslmode=disable`,'--type','security','--level','warn','--fail-on','error'],
       {encoding:'utf8',timeout:120000,env:{...process.env,PATH:dirname(process.execPath)+delimiter+process.env.PATH}})

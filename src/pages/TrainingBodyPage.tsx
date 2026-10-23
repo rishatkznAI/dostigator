@@ -1,12 +1,13 @@
 import { Camera, Plus, Ruler, Scale } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { localDate } from '../lib/date'
 import { useAuth } from '../context/AuthContext'
 import { LineChart } from '../components/LineChart'
 import { getProgressPhotoUrl, loadMeasurements, saveMeasurement, uploadProgressPhoto } from '../lib/trainingRepository'
 import { createId, formatNumber } from '../lib/workout'
 import type { BodyMeasurement } from '../types/training'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localDate()
 const shortDate = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
 
 function ProgressPhotos({ measurement }: { measurement?: BodyMeasurement }) {

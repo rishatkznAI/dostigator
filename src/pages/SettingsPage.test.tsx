@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { SettingsPage } from './SettingsPage'
+import { buildInfo } from '../lib/build-info'
 
 const mocks = vi.hoisted(() => ({
   authUser: { id: 'user-a', email: 'a@example.com', user_metadata: { display_name: 'Старый ник' } } as { id: string; email: string; user_metadata?: { display_name?: string } } | null,
@@ -107,6 +108,13 @@ describe('backup and sync controls', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+  })
+
+  it('identifies the installed build from the bundled metadata', () => {
+    renderPage()
+    const version = screen.getByText(`Достигатор · версия ${buildInfo.version}`, { exact: false })
+    expect(version).toHaveTextContent(`Сборка ${buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}`)
+    if (buildInfo.builtAt) expect(version.querySelector('time')).toHaveAttribute('dateTime', buildInfo.builtAt)
   })
 
   it('changes the nickname used by the application greeting', async () => {

@@ -417,7 +417,7 @@ export function WorkoutPage() {
       {confirmation && <div className="training-confirmation" role="status"><CheckCircle2 size={18} /><span>{confirmation.text}</span><small>{confirmation.exerciseName}</small>{!autoRest && confirmation.needsRest && <button type="button" aria-label={`Начать отдых · ${formatRestDuration(confirmation.seconds)}`} onClick={() => { primeRestAlert(); setDraft((current) => current && ({ ...current, activeRest: { until: Date.now() + confirmation.seconds * 1000, exerciseName: confirmation.exerciseName, plannedSeconds: confirmation.seconds } })) }}>Отдых</button>}</div>}
 
       {historyStatus === 'error' && <button className="history-retry" type="button" onClick={()=>setHistoryRetry(value=>value+1)}>Прошлые результаты недоступны · повторить</button>}
-      <div className="workout-focus-nav"><button type="button" className="training-secondary" onClick={()=>setExercisePickerOpen(true)}>Упражнение {activeExerciseNumber} из {draft.exercises.length} <span>Список</span></button></div>
+      <div className="workout-focus-nav"><button type="button" className="training-secondary" onClick={event=>{event.currentTarget.focus({preventScroll:true});setExercisePickerOpen(true)}}>Упражнение {activeExerciseNumber} из {draft.exercises.length} <span>Список</span></button></div>
       {!nextExercise && finishSummary.sets > 0 && <section className="strength-complete" role="status"><CheckCircle2 /><h2>Силовая часть готова</h2><p>{finishSummary.sets} рабочих подходов записано.</p>{linkedCardio.length ? <><p>Кардио записано · {cardioClock(linkedCardio.reduce((sum,item)=>sum+item.receipt.durationSeconds,0)*1000)}</p><button type="button" className="primary-button wide" onClick={()=>setFinishOpen(true)}>Завершить тренировку</button></> : <><Link className="primary-button wide" to="/training/cardio">Перейти к кардио</Link><button type="button" className="text-button" onClick={()=>setFinishOpen(true)}>Завершить без кардио</button></>}</section>}
       {draft.activeRest !== null && (
         <RestTimer
@@ -456,7 +456,7 @@ export function WorkoutPage() {
       </div>
       </div>
       {exercisePickerOpen && <BottomSheet title="Упражнения тренировки" onClose={()=>setExercisePickerOpen(false)}><div className="choice-list workout-exercise-picker">{draft.exercises.map((exercise,index)=><button key={exercise.id} type="button" aria-current={exercise.id===activeExerciseId?'step':undefined} onClick={()=>{selectExercise(exercise.id);setExercisePickerOpen(false)}}><span><strong>{index+1}. {exercise.exercise.name}</strong><small>{exercise.skipped?'Пропущено':`${exercise.sets.filter(set=>set.done&&!set.isWarmup).length} из ${exercise.sets.filter(set=>!set.isWarmup).length} записано`}</small></span></button>)}</div></BottomSheet>}
-      <details className="training-extras workout-options"><summary><span><strong>Отдых и самочувствие</strong><small>{autoRest ? 'Автоотдых включён' : 'Автоотдых выключен'} · оценка готовности</small></span></summary><label className="training-toggle"><input type="checkbox" checked={autoRest} onChange={(event) => { setAutoRest(event.target.checked); localStorage.setItem(`trainlog:auto-rest:${draft.userId}`, String(event.target.checked)) }} />Автоматически запускать отдых после подхода</label><details className="training-extras workout-readiness"><summary>Изменить оценку самочувствия</summary><ReadinessCheck submitLabel="Обновить самочувствие" onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} /></details></details>
+      <details className="training-extras workout-options"><summary><span><strong>Автоотдых и самочувствие</strong><small>{autoRest ? 'Автоотдых включён' : 'Автоотдых выключен'} · оценка готовности</small></span></summary><label className="training-toggle"><input type="checkbox" checked={autoRest} onChange={(event) => { setAutoRest(event.target.checked); localStorage.setItem(`trainlog:auto-rest:${draft.userId}`, String(event.target.checked)) }} />Автоматически запускать отдых после подхода</label><details className="training-extras workout-readiness"><summary>Изменить оценку самочувствия</summary><ReadinessCheck submitLabel="Обновить самочувствие" onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} /></details></details>
 
       <Link className="workout-cardio-link" to="/training/cardio"><HeartPulse /><span><strong>Добавить кардио</strong><small>Включить таймер или записать время вручную. Силовая тренировка останется сохранённой.</small></span></Link>
 
@@ -470,8 +470,8 @@ export function WorkoutPage() {
             <h3>{draft.title}</h3>
             <div>
               <span><strong>{elapsedClock(draft,now)}</strong> время</span>
-              <span><strong>{finishSummary.sets}</strong> подходов</span>
-              <span><strong>{formatNumber(finishSummary.volume)}</strong> кг</span>
+              <span><strong>{finishSummary.sets}</strong> подходы</span>
+              <span><strong>{formatNumber(finishSummary.volume)}</strong> кг тоннажа</span>
             </div>
 
             <p className="finish-cardio-fact">{linkedCardio.length?`Кардио: ${cardioClock(linkedCardio.reduce((sum,item)=>sum+item.receipt.durationSeconds,0)*1000)} записано`:'Кардио не записано для этой тренировки'}</p>
