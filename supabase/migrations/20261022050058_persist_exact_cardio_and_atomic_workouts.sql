@@ -1,6 +1,29 @@
--- Additive contract. Prototype tested only in disposable local PostgreSQL.
+-- Additive contract, verified on a production-schema copy and isolated hosted Supabase.
 begin;
 set local lock_timeout = '5s';
+-- Hosted PostgREST 14 retries serialization_failure indefinitely. These two
+-- existing RPCs use it for application conflicts too. Change ONLY the known,
+-- audited bodies, preserving signatures, ownership, ACLs and all stored rows.
+do $conflict_transport$
+declare v_entry record; v_oid regprocedure; v_body text;
+begin
+  for v_entry in select * from (values
+    ('public.dostigator_apply_mutation(uuid,uuid,text,uuid,text,text,bigint,jsonb,text)',
+      '77f6863ceb12123ccac12d58edacbb12','7cd0da097d8ff09647c6ed7c26d44bf8'),
+    ('public.dostigator_undo_mutation(uuid,uuid,uuid,text)',
+      '9e068c1ddaf429c9d589f4bbc8abd9cf','4c1e0f42d468480c50dc1985f17de67a')
+  ) as expected(signature,before_md5,after_md5) loop
+    v_oid:=pg_catalog.to_regprocedure(v_entry.signature);
+    select prosrc into v_body from pg_catalog.pg_proc where oid=v_oid;
+    if not found or md5(v_body) not in (v_entry.before_md5,v_entry.after_md5) then
+      raise exception 'Unexpected RPC definition: %. Stop and audit before release.',v_entry.signature;
+    end if;
+    if md5(v_body)=v_entry.before_md5 then
+      execute replace(pg_catalog.pg_get_functiondef(v_oid),'''40001''','''PT409''');
+    end if;
+  end loop;
+end $conflict_transport$;
+
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 

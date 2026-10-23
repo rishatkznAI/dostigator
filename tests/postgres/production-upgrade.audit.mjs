@@ -59,6 +59,15 @@ try {
  assert.equal(after.library.length,before.library.length+2)
  await admin.query(await readFile('supabase/migrations/20261022175114_add_v21_exercise_references.sql','utf8'))
  assert.deepEqual(await snapshotNow(),after,'reference rerun does not duplicate or rewrite data')
+ const contract=await readFile('supabase/migrations/20261022050058_persist_exact_cardio_and_atomic_workouts.sql','utf8')
+ const conflictTransport=contract.match(/do \$conflict_transport\$[\s\S]*?end \$conflict_transport\$;/)[0]
+ await admin.query(conflictTransport) // the already-patched known definitions are accepted
+ await admin.query('begin')
+ const signature='public.dostigator_undo_mutation(uuid,uuid,uuid,text)'
+ const def=(await admin.query('select pg_get_functiondef($1::regprocedure) def',[signature])).rows[0].def
+ await admin.query(def.replace('AS $function$','AS $function$-- unknown revision fixture\n'))
+ await assert.rejects(()=>admin.query(conflictTransport),/Unexpected RPC definition/)
+ await admin.query('rollback')
  console.info(JSON.stringify({gate:'actual-production-copy',sessions:before.sessions.length,completed:before.sessions.filter(r=>r.finished_at).length,active:before.sessions.filter(r=>!r.finished_at).length,exercises:before.exercises.length,sets:before.sets.length,oldFieldsUnchanged:true,newReferences:2,duplicateReferences:0}))
 } finally {
  if(admin) await admin.end().catch(()=>{})

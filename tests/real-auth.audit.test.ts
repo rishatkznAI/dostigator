@@ -63,6 +63,14 @@ it.skipIf(process.env.DOSTIGATOR_AUTH_AUDIT!=='1')('real Supabase Auth: login, r
     expect(legacyCancel.error?.code).toBe('PT426')
     const cas=await supabase.rpc('training_cancel_workout',{p_id:draft.id,p_mutation_id:crypto.randomUUID(),p_expected_revision:0,p_expected_owner:owner}).abortSignal(AbortSignal.timeout(10000))
     expect(cas.status).toBe(409);expect(cas.error?.code).toBe('PT409')
+    const goalId=crypto.randomUUID(),goalMutation=crypto.randomUUID()
+    const goal={id:goalId,area_id:null,title:'Hosted conflict audit',description:'',why:'',kind:'goal',status:'active',progress:0,target_date:null,completed_at:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()}
+    const mutateGoal=(revision:number,mutation:string,operation:string,after:object)=>supabase.rpc('dostigator_apply_mutation',{p_expected_owner:owner,p_mutation_id:mutation,p_entity_type:'goal',p_entity_id:goalId,p_operation:operation,p_label:'Isolated audit',p_expected_revision:revision,p_after:after,p_source:'ui'}).abortSignal(AbortSignal.timeout(10000))
+    expect((await mutateGoal(0,goalMutation,'goal_create',goal)).error?.message).toBeUndefined()
+    expect((await mutateGoal(1,crypto.randomUUID(),'goal_edit',{...goal,title:'Edited'})).error?.message).toBeUndefined()
+    expect((await mutateGoal(1,crypto.randomUUID(),'goal_edit',goal)).error?.code).toBe('PT409')
+    const undo=await supabase.rpc('dostigator_undo_mutation',{p_expected_owner:owner,p_original_mutation_id:goalMutation,p_mutation_id:crypto.randomUUID(),p_source:'undo'}).abortSignal(AbortSignal.timeout(10000))
+    expect(undo.status).toBe(409);expect(undo.error?.code).toBe('PT409')
     const cardioId=crypto.randomUUID(),cardio={activity_date:'2026-10-21',kind:'walk',duration_minutes:20,duration_seconds:1217,workout_session_id:draft.id}
     const exact=await supabase.rpc('cardio_apply_fact',{p_id:cardioId,p_mutation_id:crypto.randomUUID(),p_expected_revision:0,p_record:cardio,p_expected_owner:owner})
     expect(exact.error?.message).toBeUndefined();expect(exact.data.duration_seconds).toBe(1217)
