@@ -1146,3 +1146,22 @@ body.modal-open { overflow: hidden; }
   .training-module .training-stepper { grid-template-columns: 36px minmax(0, 1fr) 36px; }
   .training-module .training-record-button { font-size: 16px; overflow-wrap: anywhere; padding: 12px; }
 }
+
+
+/* The same flex error-card was also used for multi-action cardio conflicts. */
+.training-module .error-card { flex-wrap: wrap; overflow-wrap: anywhere; }
+.training-module .error-card > :is(h2, h3, p, span, div) { min-width: 0; }
+.training-module .error-card.cardio-conflict {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  justify-items: stretch;
+  margin-top: 12px;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.training-module .cardio-conflict h3 { margin: 0; color: #ffb4af; font-size: 16px; line-height: 1.35; }
+.training-module .cardio-conflict p { margin: 0; overflow-wrap: anywhere; }
+.training-module .cardio-conflict .training-secondary { min-width: 0; margin: 4px 0 0; white-space: normal; overflow-wrap: anywhere; }
