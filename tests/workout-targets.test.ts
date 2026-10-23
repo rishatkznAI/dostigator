@@ -50,6 +50,12 @@ describe('per-set workout targets', () => {
     expect(getWorkoutTargets('8–12', 3, selected).targets[2]?.weightKg).toBe(40)
   })
 })
+it('does not recommend more repetitions than the program allows even when last fact exceeded it', () => {
+ const result = getWorkoutTargets('8–12', 3, previous([set(100, 15), set(100, 15), set(100, 15)]))
+ expect(result.targets.map(item => item.reps)).toEqual([12, 12, 12])
+ expect(result.targets[0]?.weightKg).toBe(100)
+ expect(result.mode).toBe('repeat')
+})
 it('uses the new A/B rep range without rewriting the prior facts or increasing weight',()=>{
  const history={...previous([set(20,8),set(20,12),set(20,14)]),target:'8–12'}
  const before=structuredClone(history)
