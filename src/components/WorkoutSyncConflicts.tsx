@@ -45,7 +45,7 @@ export function WorkoutSyncConflicts({ userId, currentWorkoutId }: Props) {
       {otherCount > 0 && (
         <aside className="workout-conflict-notice" role="status">
           <div>
-            <strong>Есть {otherCount} {otherCount === 1 ? 'неразрешённая тренировка' : 'неразрешённых тренировки'}</strong>
+            <strong>Другие конфликты синхронизации: {otherCount}</strong>
             <p>Текущую тренировку можно продолжать. Разбор другой версии — в истории.</p>
           </div>
           <Link to="/training/history">Открыть историю</Link>
@@ -109,7 +109,7 @@ export function WorkoutSyncConflicts({ userId, currentWorkoutId }: Props) {
                   }}>Сохранить мою версию</button>
                 )}
                 <button type="button" className="training-secondary" disabled={busy} onClick={() => {
-                  if (!window.confirm('Оставить серверную версию? Несинхронизированный ввод останется только в скачанной резервной копии.')) return
+                  if (!window.confirm('Оставить серверную версию? Несинхронизированный ввод будет потерян, если ты заранее не скачал резервную копию.')) return
                   try {
                     assertWorkoutConflictCurrent(userId, conflict.id)
                     clearWorkoutConflict(userId, conflict.id)
