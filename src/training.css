@@ -550,7 +550,7 @@ body.modal-open { overflow: hidden; }
 .training-module .sheet-backdrop { position: fixed; z-index: 100; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 60px; background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
 .training-module .bottom-sheet { width: min(100%, 42.5rem); max-height: 88dvh; overflow: auto; padding: 8px 18px calc(24px + env(safe-area-inset-bottom)); border: 1px solid #353e30; border-bottom: 0; border-radius: 26px 26px 0 0; background: #151913; box-shadow: 0 -30px 90px rgba(0,0,0,.55); animation: sheet-in .22s ease-out; }
 @keyframes sheet-in { from { transform: translateY(24px); opacity: .4; } }
-.training-module .sheet-handle { width: 42px; height: 4px; margin: 1px auto 13px; border-radius: 99px; background: #3d4538; }
+.training-module .sheet-handle { position: static; transform: none; width: 42px; height: 4px; margin: 1px auto 13px; border-radius: 99px; background: #3d4538; }
 .training-module .bottom-sheet > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .training-module .bottom-sheet > header h2 { margin: 0; font-size: 1.25rem; letter-spacing: -.03em; }
 .training-module .sheet-content { padding-top: 17px; }
@@ -1165,3 +1165,9 @@ body.modal-open { overflow: hidden; }
 .training-module .cardio-conflict h3 { margin: 0; color: #ffb4af; font-size: 16px; line-height: 1.35; }
 .training-module .cardio-conflict p { margin: 0; overflow-wrap: anywhere; }
 .training-module .cardio-conflict .training-secondary { min-width: 0; margin: 4px 0 0; white-space: normal; overflow-wrap: anywhere; }
+
+/* Keep correction controls reachable without compressing the saved result. */
+.training-module .history-exercise li { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.training-module .history-exercise li > span { min-width:0; overflow-wrap:anywhere; }
+.training-module .history-exercise li > button { min-height:44px; padding:8px 12px; }
+.set-skip-button { min-height:44px; margin-top:8px; }

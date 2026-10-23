@@ -30,18 +30,25 @@ function LoadingScreen() {
   return <div className="loading-screen" role="status" aria-live="polite" aria-atomic="true" aria-busy="true"><span aria-hidden="true">Д</span><p>Собираем следующий шаг…</p></div>
 }
 
+function SessionRecovery() {
+  const { sessionError, retrySession } = useAuth()
+  return <main className="auth-page"><section className="auth-card"><h1>Не удалось открыть приложение</h1><p role="alert">{sessionError}</p><button className="primary-button" type="button" onClick={()=>void retrySession()}>Повторить проверку входа</button></section></main>
+}
+
 function ProtectedApp() {
-  const { user, loading } = useAuth()
+  const { user, loading, sessionError } = useAuth()
   useSyncQueue(user?.id)
   useCardioSync(user?.id)
   if (loading) return <LoadingScreen />
+  if (!user && sessionError) return <SessionRecovery />
   if (!user) return <Navigate to="/login" replace />
-  return <DataProvider><OnboardingGate fallback={<LoadingScreen />}><Outlet /></OnboardingGate></DataProvider>
+  return <DataProvider key={user.id}><OnboardingGate fallback={<LoadingScreen />}><Outlet /></OnboardingGate></DataProvider>
 }
 
 function PublicOnly({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, loading, sessionError } = useAuth()
   if (loading) return <LoadingScreen />
+  if (!user && sessionError) return <SessionRecovery />
   if (user) return <Navigate to="/" replace />
   return children
 }

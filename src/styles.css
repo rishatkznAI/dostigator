@@ -598,3 +598,6 @@ input:focus, textarea:focus, select:focus { border-color: #8c7537; box-shadow: 0
   .bottom-nav .nav-label { font-size: 0; }
   .bottom-nav .nav-label::after { content: attr(data-short-label); font-size: .66rem; }
 }
+
+.sheet .history-correction-caption { color: var(--text-secondary); font-size: .85rem; line-height: 1.5; }
+.sheet .history-correction-form select { height: 48px; appearance: none; padding-right: 36px; background-image: linear-gradient(45deg, transparent 50%, #a3a3ad 50%), linear-gradient(135deg, #a3a3ad 50%, transparent 50%); background-position: calc(100% - 18px) center, calc(100% - 12px) center; background-size: 6px 6px; background-repeat: no-repeat; }

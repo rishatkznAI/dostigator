@@ -72,6 +72,8 @@ export async function loadHistory(limit = 100): Promise<HistoryWorkout[]> {
 
   return sessions.map((session) => ({
     id: session.id,
+    revision: session.revision,
+    updatedAt: session.updated_at,
     templateCode: session.template_code,
     title: session.title,
     startedAt: session.started_at,

@@ -25,7 +25,7 @@ export function compareExercise(current: HistoryWorkout['exercises'][number], pr
   const older = previous && workFacts(previous.sets)
   if (!sets.length) return 'Нет выполненных рабочих подходов'
   if (!previous || previous.skipped || !older?.length || current.target !== previous.target) return 'Нет сопоставимого прошлого результата'
-  if (sets.length !== older.length || current.sets.filter((s) => !s.isWarmup).some((s) => !s.done) || previous.sets.filter((s) => !s.isWarmup).some((s) => !s.done)) return `Выполнено ${sets.length} подхода; раньше ${older.length}. Состав подходов отличается — нагрузку не сравниваем.`
+  if (sets.length !== older.length || current.sets.filter((s) => !s.isWarmup).some((s) => !s.done) || previous.sets.filter((s) => !s.isWarmup).some((s) => !s.done)) return `Рабочие подходы: ${sets.length}; раньше ${older.length}. Состав подходов отличается — нагрузку не сравниваем.`
   if (sets.some(set=>set.weightKg===null) || older.some(set=>set.weightKg===null)) return 'Вес указан не во всех подходах — нагрузку не сравниваем.'
   const sameWeights = sets.every((set, index) => (set.weightKg ?? 0) === (older[index].weightKg ?? 0))
   const timed = parseRepRange(current.target)?.timed

@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { loadCardio } from '../lib/cardio'
 import { loadHistory } from '../lib/trainingRepository'
+import { CorrectWorkoutSet } from '../components/CorrectWorkoutSet'
+import type { WorkoutSetDraft } from '../types/training'
 import { WorkoutResult } from '../components/WorkoutResult'
 import { cacheTrainingHistory, cachedTrainingHistory, mergeTrainingHistory } from '../lib/training-insights'
 import { getSyncQueue } from '../lib/storage'
@@ -20,6 +22,8 @@ export function TrainingHistoryPage() {
   const [history, setHistory] = useState<HistoryWorkout[]>(() => user ? cachedTrainingHistory(user.id) : [])
   const [params] = useSearchParams()
   const [openId, setOpenId] = useState<string | null>(() => params.get('finished'))
+  const [editing, setEditing] = useState<{workout: HistoryWorkout; exercise: HistoryWorkout['exercises'][number]; set: WorkoutSetDraft} | null>(null)
+  const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [cardioError,setCardioError]=useState<string|null>(null)
@@ -59,14 +63,16 @@ export function TrainingHistoryPage() {
 
   return (
     <div className="page">
-      <header className="page-header"><p className="eyebrow">Твой путь</p><h1>История</h1><p>Каждая тренировка — ещё одна точка прогресса.</p></header>
+      <header className="page-header"><p className="eyebrow">Твой путь</p><h1>История тренировок</h1><p>Каждая тренировка — ещё одна точка прогресса.</p></header>
       {params.get('finished') && <p className="training-confirmation" role="status">Тренировка завершена. Ниже — результат и изменения.</p>}
       {pending.map((draft) => (
         <div className="pending-card" key={draft.id}><CloudOff /><div><strong>{draft.title}</strong><span>Локальный результат · ожидает синхронизации</span></div></div>
       ))}
       {cardioError && <p className="error-card">{cardioError}</p>}
       <WorkoutSyncConflicts userId={userId}/>
-      {error && <div className="error-card">{error}</div>}
+      {error && <div className="error-card" role="alert">{error}</div>}
+      <button type="button" className="training-secondary" disabled={loading} onClick={()=>void refresh()}>{loading?'Обновляем…':'Обновить историю'}</button>
+      {notice && <p className="training-confirmation" role="status">{notice}</p>}
       {!loading && !history.length && !pending.length && (
         <div className="empty-state"><span>01</span><h2>Здесь появится история</h2><p>Заверши первую тренировку, и TrainLog сохранит результат.</p></div>
       )}
@@ -81,8 +87,8 @@ export function TrainingHistoryPage() {
                 <ChevronDown className={open ? 'rotate' : ''} />
                 <div className="history-metrics">
                   <span><strong>{Math.floor(summary.durationSeconds/60)}:{String(summary.durationSeconds%60).padStart(2,'0')}</strong> время</span>
-                  <span><strong>{summary.sets}</strong> подходов</span>
-                  <span><strong>{formatNumber(summary.volume)}</strong> кг</span>
+                  <span><strong>{summary.sets}</strong> подходы</span>
+                  <span><strong>{formatNumber(summary.volume)}</strong> кг тоннажа</span>
                 </div>
               </button>
               {open && (
@@ -90,7 +96,7 @@ export function TrainingHistoryPage() {
                   {workout.exercises.map((exercise) => (
                     <div className="history-exercise" key={exercise.id}>
                       <div><strong>{exercise.sortOrder}. {exercise.exerciseName}</strong><span>{exercise.skipped ? `Пропущено · ${exercise.skipReason}` : exercise.target}</span></div>
-                      {!exercise.skipped && <ul>{exercise.sets.filter((set) => set.done).map((set) => <li key={set.id}>{set.isWarmup ? 'Разминка' : set.setNumber}. {parseRepRange(exercise.target)?.timed ? `${set.reps} сек` : formatSet(set)}</li>)}</ul>}
+                      {!exercise.skipped && <ul>{exercise.sets.filter((set) => set.done).map((set) => <li key={set.id}><span>{set.isWarmup ? 'Разминка' : set.setNumber}. {parseRepRange(exercise.target)?.timed ? `${set.reps} сек` : formatSet(set)}</span>{userId && workout.revision !== undefined && !pending.some(item=>item.id===workout.id) && <button type="button" className="text-button" aria-label={`Исправить ${exercise.exerciseName}, подход ${set.setNumber}`} onClick={()=>setEditing({workout,exercise,set})}>Исправить</button>}</li>)}</ul>}
                     </div>
                   ))}
                 </div>
@@ -99,6 +105,11 @@ export function TrainingHistoryPage() {
           )
         })}
       </div>
+      {editing && userId && <CorrectWorkoutSet key={editing.set.id} owner={userId} {...editing} onClose={()=>setEditing(null)} onSaved={corrected=>{
+        refreshGenerationRef.current+=1
+        setHistory(current=>{const next=current.map(item=>item.id===corrected.id?corrected:item);cacheTrainingHistory(userId,next);return next})
+        setEditing(null);setNotice('Подход исправлен. Итог и статистика пересчитаны.');void refresh()
+      }}/> }
       {loading && <div className="inline-loader">Загружаем историю…</div>}
     </div>
   )

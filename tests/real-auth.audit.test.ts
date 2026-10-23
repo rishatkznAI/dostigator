@@ -41,10 +41,14 @@ it.skipIf(process.env.DOSTIGATOR_AUTH_AUDIT!=='1')('real Supabase Auth: login, r
     const b=await peer.auth.signInWithPassword({email:'audit-b@example.invalid',password})
     expect(b.error?.message).toBeUndefined()
     for(const table of ['dostigator_areas','dostigator_goals','dostigator_actions','dostigator_habits','dostigator_habit_checkins','dostigator_weekly_reviews']) {
-      const own=await supabase.from(table).select('id').limit(1)
+      const own=await supabase.from(table).select('id,user_id').limit(1)
       expect(own.status,table).toBe(200);expect(own.data!.length,table).toBeGreaterThan(0)
-      const other=await peer.from(table).select('id')
-      expect(other.status,table).toBe(200);expect(other.data,table).toEqual([])
+      expect(own.data!.every(row=>row.user_id===owner),table).toBe(true)
+      // A browser login can create B's own reference rows. Test ownership, not an empty account.
+      const other=await peer.from(table).select('id,user_id')
+      expect(other.status,table).toBe(200);expect(other.data!.every(row=>row.user_id===b.data.user!.id),table).toBe(true)
+      const foreign=await peer.from(table).select('id').in('id',own.data!.map(row=>row.id))
+      expect(foreign.status,table).toBe(200);expect(foreign.data,table).toEqual([])
     }
     console.info('Auth gate: peer logged in')
     const hidden=await peer.from('workout_sessions').select('*').eq('id',draft.id)

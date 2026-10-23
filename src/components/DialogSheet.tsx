@@ -1,8 +1,10 @@
+import { visibleDialogControl } from '../lib/dialog-focus'
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 const focusableSelector = [
+  'summary',
   'button:not([disabled]):not([tabindex="-1"])',
   'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
   'select:not([disabled]):not([tabindex="-1"])',
@@ -63,7 +65,7 @@ export function DialogSheet({
       }
       if (event.key !== 'Tab') return
 
-      const controls = Array.from(sheet.querySelectorAll<HTMLElement>(focusableSelector))
+      const controls = Array.from(sheet.querySelectorAll<HTMLElement>(focusableSelector)).filter(visibleDialogControl)
       if (controls.length === 0) {
         event.preventDefault()
         sheet.focus()
