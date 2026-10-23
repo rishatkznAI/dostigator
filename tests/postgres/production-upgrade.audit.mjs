@@ -34,6 +34,8 @@ try {
  for(const p of catalog.policies) await admin.query(`create policy ${quote(p.policyname)} on public.${quote(p.tablename)} as ${p.permissive} for ${p.cmd} to ${p.roles.map(quote).join(',')}${p.qual?' using ('+p.qual+')':''}${p.with_check?' with check ('+p.with_check+')':''}`)
  for(const t of extra.tables) await admin.query(`revoke all on public.${quote(t.name)} from public,anon,authenticated`)
  for(const g of extra.grants??[]) await admin.query(`grant ${g.privilege_type} on public.${quote(g.table_name)} to ${g.grantee==='PUBLIC'?'public':quote(g.grantee)}`)
+ for(const signature of new Set((extra.function_grants??[]).map(g=>g.function)))
+  await admin.query(`revoke execute on function ${signature} from public,anon,authenticated`)
  for(const g of extra.function_grants??[]) {
   await admin.query(`${g.execute?'grant':'revoke'} execute on function ${g.function} ${g.execute?'to':'from'} ${quote(g.grantee)}`)
  }
