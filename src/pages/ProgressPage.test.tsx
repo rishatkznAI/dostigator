@@ -38,7 +38,7 @@ describe('combined progress page', () => {
   it('keeps goals and habits in one section without duplicating training navigation', () => {
     render(<MemoryRouter initialEntries={['/progress']}><ProgressPage /></MemoryRouter>)
 
-    expect(screen.getByRole('heading', { name: 'Прогресс' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Цели и привычки' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Пробежать 5 км' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Тренировки/ })).not.toBeInTheDocument()
 

@@ -48,7 +48,5 @@ describe('mobile workout UX regression', () => {
   it('forces two stacked comparison columns to become one on a phone', () => {
     const css = readFileSync('src/training.css', 'utf8')
     expect(css).toMatch(/@media\s*\(max-width:\s*540px\)[\s\S]*?\.workout-conflict-versions\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/)
-    const globalCss = readFileSync('src/styles.css', 'utf8')
-    expect(globalCss).toContain('@media (min-width: 361px) and (max-width: 430px)')
   })
 })

@@ -8,6 +8,7 @@ import test from 'node:test'
 import { prepareFreshEntry } from '../scripts/prepare-pages-build.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
+const packageVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
 const loadConfig = `
   import { loadConfigFromFile } from 'vite';
   const result = await loadConfigFromFile({ command: 'build', mode: 'production' });
@@ -46,7 +47,7 @@ test('the bundled identity and public artifact match without configuration secre
   }))
   assert.equal(base, '/dostigator/')
   assert.equal(info.commit, commit)
-  assert.equal(info.version, '0.1.1')
+  assert.equal(info.version, packageVersion)
   assert.equal(new Date(info.builtAt).toISOString(), info.builtAt)
   assert.deepEqual(Object.keys(info).sort(), ['builtAt', 'commit', 'version'])
   assert.equal(emitted.length, 1)

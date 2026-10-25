@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { SettingsPage } from './SettingsPage'
 import { buildInfo } from '../lib/build-info'
+import { getPwaUpdateController } from '../lib/pwa-update'
 
 const mocks = vi.hoisted(() => ({
   authUser: { id: 'user-a', email: 'a@example.com', user_metadata: { display_name: 'Старый ник' } } as { id: string; email: string; user_metadata?: { display_name?: string } } | null,
@@ -110,6 +111,7 @@ describe('backup and sync controls', () => {
 
   afterEach(() => {
     cleanup()
+    getPwaUpdateController().dispose()
     vi.restoreAllMocks()
   })
 
@@ -118,6 +120,30 @@ describe('backup and sync controls', () => {
     const version = screen.getByText(`Достигатор · версия ${buildInfo.version}`, { exact: false })
     expect(version).toHaveTextContent(`Сборка ${buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}`)
     if (buildInfo.builtAt) expect(version.querySelector('time')).toHaveAttribute('dateTime', buildInfo.builtAt)
+  })
+
+  it('checks the published version manually without claiming freshness before the response', async () => {
+    let finish!: (response: Response) => void
+    const network = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    renderPage()
+    expect(screen.getByText('Актуальность версии ещё не проверена.')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить обновление' }))
+    expect(screen.getByRole('button', { name: 'Проверяем…' })).toBeDisabled()
+    expect(screen.queryByText(/Установлена актуальная версия/)).not.toBeInTheDocument()
+    expect(network).toHaveBeenCalledWith(expect.stringContaining('build-info.json?check='), expect.objectContaining({ cache: 'no-store' }))
+    finish(Response.json({ version: '0.2.1', commit: 'b'.repeat(40), builtAt: '2026-10-25T11:00:00Z' }))
+    await waitFor(() => expect(screen.getByText('На сервере доступна новая сборка.')).toBeVisible())
+    expect(screen.getByText('0.2.1')).toBeVisible()
+    expect(screen.getByTitle('b'.repeat(40))).toHaveTextContent('bbbbbbb')
+    expect(screen.queryByText(/Установлена актуальная версия/)).not.toBeInTheDocument()
+  })
+
+  it('does not show a current-version confirmation when the manual check fails or is offline', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network failed'))
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить обновление' }))
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Проверка версии' })).toHaveTextContent('Не удалось проверить версию'))
+    expect(screen.queryByText(/Установлена актуальная версия/)).not.toBeInTheDocument()
   })
 
   it('uses native navigation to the fresh entry only after confirmation', () => {

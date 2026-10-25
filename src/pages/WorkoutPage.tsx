@@ -24,6 +24,7 @@ import { createWorkoutSyncQueue } from '../lib/workout-sync'
 import { recordSetAndPrepareNext, skipSet, undoSet } from '../lib/set-logging'
 import { getWorkoutTargets, selectPreviousResults } from '../lib/workout-targets'
 import { programV21Rules } from '../lib/program-v21'
+import { FREE_WORKOUT_CODE, FREE_WORKOUT_TEMPLATE } from '../lib/free-workout'
 import type { Exercise, PreviousResult, WorkoutDraft, WorkoutReadiness, WorkoutSetDraft } from '../types/training'
 
 type SyncStatus = 'local' | 'syncing' | 'synced' | 'offline' | 'error'
@@ -33,7 +34,7 @@ export function WorkoutPage() {
   const { user } = useAuth()
   const userId = user?.id
   const { templates, loading, error } = useTemplates()
-  const template = templates.find((item) => item.code === code)
+  const template = code === FREE_WORKOUT_CODE ? FREE_WORKOUT_TEMPLATE : templates.find((item) => item.code === code)
   const optionalDay = template?.programRevision && template.code === 'C'
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false)
   const [prepared, setPrepared] = useState(false)
@@ -189,6 +190,7 @@ export function WorkoutPage() {
   if (loading || (!draft && template && !prepared)) return <LoadingScreen label="Готовим тренировку" />
   if (error) return <div className="workout-error"><p>{error}</p><Link to="/training">К тренировкам</Link></div>
   if (!template) return <Navigate to="/training" replace />
+  if (!draft && code === FREE_WORKOUT_CODE && prepared) return <Navigate to="/training/exercises" replace />
   if (!draft) return <main className="workout-page workout-preparation">
     <Link className="back-link" to="/training"><ArrowLeft />К тренировкам</Link>
     <p className="eyebrow">Тренировка {template.code} · подготовка</p><h1>{template.title}</h1>
@@ -459,6 +461,7 @@ export function WorkoutPage() {
       <details className="training-extras workout-options"><summary><span><strong>Автоотдых и самочувствие</strong><small>{autoRest ? 'Автоотдых включён' : 'Автоотдых выключен'} · оценка готовности</small></span></summary><label className="training-toggle"><input type="checkbox" checked={autoRest} onChange={(event) => { setAutoRest(event.target.checked); localStorage.setItem(`trainlog:auto-rest:${draft.userId}`, String(event.target.checked)) }} />Автоматически запускать отдых после подхода</label><details className="training-extras workout-readiness"><summary>Изменить оценку самочувствия</summary><ReadinessCheck submitLabel="Обновить самочувствие" onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} /></details></details>
 
       <Link className="workout-cardio-link" to="/training/cardio"><HeartPulse /><span><strong>Добавить кардио</strong><small>Включить таймер или записать время вручную. Силовая тренировка останется сохранённой.</small></span></Link>
+      <Link className="workout-cardio-link" to="/training/exercises"><span><strong>Добавить упражнения</strong><small>Выбрать из общего каталога или добавить своё в текущую тренировку.</small></span></Link>
 
 
 

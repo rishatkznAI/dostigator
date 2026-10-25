@@ -8,6 +8,7 @@ import { useOnboarding } from '../context/OnboardingContext'
 import { assertActiveOwner, importBackup, isBackup, loadAllHistory, makeBackup, previewBackup } from '../lib/repository'
 import { clearQuarantine, queueStats, readQuarantine } from '../lib/offline'
 import { buildInfo } from '../lib/build-info'
+import { AppUpdateCheck } from '../components/AppUpdateCheck'
 import { getPendingWrites } from '../lib/update-safety'
 import type { BackupPreview } from '../lib/repository'
 import type { PersonalBackup } from '../types'
@@ -253,6 +254,7 @@ export function SettingsPage() {
     <button className="logout-button" disabled={busy} aria-busy={operation === 'signout'} onClick={() => void logOut()}><LogOut /><span><strong>{operation === 'signout' ? 'Выходим…' : 'Выйти'}</strong><small>Данные в Supabase сохранятся</small></span></button>
     <section className="settings-build-info" aria-label="Версия приложения">
       <p className="version">Достигатор · версия {buildInfo.version}<br />Сборка {buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}{buildInfo.builtAt && <> · <time dateTime={buildInfo.builtAt}>{new Date(buildInfo.builtAt).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })} МСК</time></>}</p>
+      <AppUpdateCheck />
       <a className="fresh-version-link" href={`${import.meta.env.BASE_URL}auth/v1/open.html?release=${buildInfo.commit}`} onClick={(event) => {
         if (busy || operationRef.current || syncing || getPendingWrites() > 0) {
           event.preventDefault()

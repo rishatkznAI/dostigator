@@ -6,6 +6,7 @@ const repo = fileURLToPath(new URL('../../', import.meta.url))
 export default defineConfig({
   root: here, cacheDir: `${repo}.cache/local-preview`, plugins: [react()],
   resolve: { alias: [
+    { find: 'virtual:pwa-register', replacement: fileURLToPath(new URL('../http-browser/sw.ts', import.meta.url)) },
     { find: /^.*(context\/AuthContext|\.\/AuthContext)$/, replacement: `${here}auth.ts` },
     { find: /^.*(lib\/supabase|\.\/supabase)$/, replacement: `${here}supabase.ts` },
     { find: /^.*(?:lib\/|\.\/)trainingRepository$/, replacement: `${here}repository.ts` },

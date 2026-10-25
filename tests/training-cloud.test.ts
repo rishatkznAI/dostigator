@@ -1,12 +1,38 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { deleteWorkoutSession, syncWorkoutDraft } from '../src/lib/trainingRepository'
+import { deleteWorkoutSession, loadHistory, syncWorkoutDraft } from '../src/lib/trainingRepository'
 import { createWorkoutDraft } from '../src/lib/workout'
 import { enqueueDraft, getSyncQueue, removeQueuedDraft } from '../src/lib/storage'
 import { template } from './local-browser/fixtures'
 import { rebaseWorkoutConflict } from '../src/lib/workout-conflicts'
-const {rpc,getUser}=vi.hoisted(()=>({rpc:vi.fn(),getUser:vi.fn()}))
-vi.mock('../src/lib/supabase',()=>({supabase:{rpc,auth:{getUser}}}))
+import { createPersonalExercise, decodePersonalExercise, encodePersonalExercise, FREE_WORKOUT_NOTE, personalExercisesFromHistory, startFreeWorkout } from '../src/lib/free-workout'
+const {rpc,getUser,from}=vi.hoisted(()=>({rpc:vi.fn(),getUser:vi.fn(),from:vi.fn()}))
+vi.mock('../src/lib/supabase',()=>({supabase:{rpc,from,auth:{getUser}}}))
 beforeEach(()=>{localStorage.clear();vi.resetAllMocks();getUser.mockResolvedValue({data:{user:{id:'owner'}},error:null})})
+it('persists free sessions and custom exercise snapshots through the existing atomic API', async () => {
+ const exercise=createPersonalExercise('Мой жим','Плечи','Моя заметка')
+ const draft=startFreeWorkout('owner','Вне расписания',[{exercise,sortOrder:1,setCount:1,repTarget:'8–12'}])
+ rpc.mockResolvedValue({data:{id:draft.id,revision:1,finished_at:null},error:null})
+ await syncWorkoutDraft(draft)
+ const payload=rpc.mock.calls[0][1]
+ expect(payload.p_session).toMatchObject({template_code:null,note:FREE_WORKOUT_NOTE,title:'Вне расписания'})
+ expect(payload.p_exercises[0].exercise_key).toBeNull()
+ expect(decodePersonalExercise(payload.p_exercises[0].note,exercise.name)).toEqual(exercise)
+})
+it('restores custom exercise identity from cloud history without reclassifying legacy null templates', async () => {
+ const exercise=createPersonalExercise('Мой жим','Плечи','Моя заметка')
+ const sessions=[{id:'free-session',template_code:null,note:FREE_WORKOUT_NOTE,title:'Свободная',finished_at:'2026-10-25T10:00:00Z'}, {id:'legacy-session',template_code:null,note:'',title:'Старая',finished_at:'2026-10-24T10:00:00Z'}]
+ const exercises=[{id:'custom-exercise',session_id:'free-session',exercise_key:null,note:encodePersonalExercise(exercise),exercise_name:exercise.name,target:'8–12',sort_order:1}, {id:'legacy-exercise',session_id:'legacy-session',exercise_key:null,note:'',exercise_name:'Удалённое из старой программы',target:'10',sort_order:1}]
+ from.mockImplementation(table=>{
+  const reply=Promise.resolve({data:table==='workout_sessions'?sessions:table==='workout_session_exercises'?exercises:[],error:null})
+  return {select(){return this},not(){return this},in(){return this},order(){return this},limit(){return this},then:reply.then.bind(reply)}
+ })
+ const history=await loadHistory()
+ expect(history[0].templateCode).toBe('free')
+ expect(history[0].exercises[0]).toMatchObject({exerciseKey:exercise.key,customExercise:exercise})
+ expect(personalExercisesFromHistory(history)).toEqual([{exercise,target:'8–12'}])
+ expect(history[1].templateCode).toBeNull()
+ expect(history[1].exercises[0].customExercise).toBeUndefined()
+})
 it('replays the exact workout graph after timeout then sends a newer queued edit',async()=>{
   const draft=createWorkoutDraft(template,'owner',new Date('2026-10-21T09:00:00Z'))
   rpc.mockResolvedValueOnce({data:null,error:{message:'timeout'}})

@@ -5,7 +5,7 @@ import { formatNumber, parseRepRange } from './workout'
 
 export const workFacts = (sets: WorkoutSetDraft[]) => sets.filter((set) => set.done && !set.isWarmup && set.reps !== null)
 export function draftToHistory(draft: WorkoutDraft): HistoryWorkout {
-  return { id: draft.id, templateCode: draft.templateCode, title: draft.title, startedAt: draft.startedAt, finishedAt: draft.finishedAt!, timerPausedDurationMs: draft.timerPausedDurationMs, readinessMode: draft.readiness?.mode ?? null, exercises: draft.exercises.map((item) => ({ ...item, exerciseKey: item.exercise.key, exerciseName: item.exercise.name })) }
+  return { id: draft.id, templateCode: draft.templateCode, title: draft.title, startedAt: draft.startedAt, finishedAt: draft.finishedAt!, timerPausedDurationMs: draft.timerPausedDurationMs, readinessMode: draft.readiness?.mode ?? null, exercises: draft.exercises.map((item) => ({ ...item, exerciseKey: item.exercise.key, exerciseName: item.exercise.name, ...(item.exercise.custom ? { customExercise: item.exercise } : {}) })) }
 }
 export function mergeTrainingHistory(history: HistoryWorkout[], pending: WorkoutDraft[]) {
   const map = new Map(history.map((item) => [item.id, item]))
@@ -57,5 +57,6 @@ export function weeklyProgress(history: HistoryWorkout[], cardio: CardioSession[
 }
 export function exerciseFactsText(exercise: HistoryWorkout['exercises'][number]) {
   const timed = parseRepRange(exercise.target)?.timed
-  return workFacts(exercise.sets).map((set) => timed ? `${set.reps} сек` : `${formatNumber(set.weightKg ?? 0)} кг × ${set.reps}`).join(' · ')
+  const weight = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 })
+  return workFacts(exercise.sets).map((set) => timed ? `${set.reps} сек` : set.weightKg === null ? `вес не указан · ${set.reps} повт.` : `${weight.format(set.weightKg)} кг × ${set.reps}`).join(' · ')
 }
