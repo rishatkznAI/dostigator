@@ -265,8 +265,13 @@ body.modal-open { overflow: hidden; }
 .training-module .week-card-heading div:first-child { display: flex; flex-direction: column; gap: 5px; }
 .training-module .week-card-heading span { color: var(--muted); font-size: 0.875rem; }
 .training-module .week-card-heading strong { font-size: 1.375rem; letter-spacing: -.03em; }
-.training-module .week-ring { display: grid; width: 60px; height: 60px; place-items: center; border: 5px solid rgba(255, 200, 87, .16); border-top-color: var(--accent); border-radius: 50%; color: var(--muted); font-size: 0.75rem; transform: rotate(18deg); }
-.training-module .week-ring span { color: #fff; font-size: 1.125rem; font-weight: 800; transform: rotate(-18deg); }
+.training-module .week-ring { position: relative; display: grid; width: 60px; height: 60px; flex-shrink: 0; place-items: center; color: var(--muted); }
+.training-module .week-ring > svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.training-module .week-ring circle { fill: none; stroke-width: 5; }
+.training-module .week-ring-track { stroke: rgba(255, 200, 87, .16); }
+.training-module .week-ring-fill { stroke: var(--accent); }
+.training-module .week-ring span { color: #fff; font-size: 1.125rem; font-weight: 800; }
+.training-module .week-ring small { margin-left: 2px; color: var(--muted); font-size: .75rem; font-weight: 500; }
 .training-module .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
 .training-module .stats-grid > div { display: flex; flex-direction: column; gap: 3px; padding: 14px; border: 1px solid rgba(255,255,255,.05); border-radius: 15px; background: rgba(0,0,0,.18); }
 .training-module .stats-grid strong { font-size: 1.1875rem; }
@@ -749,8 +754,9 @@ body.modal-open { overflow: hidden; }
 /* Unified Dostigator shell: TrainLog visual language */
 .training-module .network-banner.error { border-color: rgba(255,113,104,.3); color: #ffaaa4; }
 .training-module .page-lead { margin: 8px 0 0; color: var(--muted); font-size: 0.875rem; line-height: 1.5; }
-.training-module .training-shortcuts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 13px; }
-.training-module .training-shortcuts a { display: flex; min-height: 58px; align-items: center; justify-content: center; flex-direction: column; gap: 5px; border: 1px solid var(--line-soft); border-radius: 14px; color: var(--muted); background: var(--panel); font-size: 0.75rem; font-weight: 800; }
+.training-module .training-shortcuts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin-bottom: 13px; }
+.training-module .training-shortcuts a { display: flex; min-width: 0; min-height: 58px; align-items: center; justify-content: center; flex-direction: column; gap: 5px; padding: 6px 2px; border: 1px solid var(--line-soft); border-radius: 14px; color: var(--muted); background: var(--panel); font-size: 0.75rem; font-weight: 800; text-align: center; }
+.training-module .training-shortcuts span { max-width: 100%; line-height: 1.35; overflow-wrap: anywhere; }
 .training-module .training-shortcuts svg { width: 17px; color: var(--accent); }
 
 /* Cardio and post-workout recovery */
@@ -907,6 +913,12 @@ body.modal-open { overflow: hidden; }
 .training-module .set-row input { font-size: 1rem; }
 .training-module .training-shortcuts a { min-height: 4rem; }
 .training-module .training-shortcuts svg { width: 1.25rem; }
+.training-module .training-program-heading { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.training-module .training-program-heading > div { min-width: 0; flex: 1 1 15rem; }
+.training-module .training-program-heading .offline-pill { flex: 0 0 auto; }
+.training-module .training-program-description { margin: 8px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
+.training-module .training-dashboard .template-card,
+.training-module .training-dashboard a { scroll-margin-top: 16px; scroll-margin-bottom: calc(var(--nav-height, 78px) + max(10px, env(safe-area-inset-bottom)) + 20px); }
 
 @media (min-width: 1024px) {
   .training-module .topbar { margin-bottom: 1.5rem; }
@@ -957,9 +969,9 @@ body.modal-open { overflow: hidden; }
 .training-module .workout-page { max-width: 42rem; padding-bottom: max(28px, env(safe-area-inset-bottom)); }
 .training-module .workout-page .workout-header { position: sticky; z-index: 20; top: 0; padding: 8px 16px; background: #101217; }
 .training-module .workout-page .workout-toolbar { margin-bottom: 2px; }
-.training-module .workout-session-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.training-module .workout-page .workout-session-title h1 { font-size: 18px; margin: 0; }
-.training-module .workout-session-title .text-button { min-height: 44px; margin: 0; padding: 6px; }
+.training-module .workout-session-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.training-module .workout-page .workout-session-title h1 { min-width: 0; overflow-wrap: anywhere; font-size: 18px; margin: 0; }
+.training-module .workout-session-title .text-button { flex: 0 0 auto; max-width: 100%; min-height: 44px; margin: 0; padding: 6px; white-space: normal; overflow-wrap: anywhere; }
 .training-module .workout-clock { gap: 8px; justify-content: space-between; }
 .training-module .workout-clock time { font-size: 19px; }
 .training-module .workout-clock .timer-toggle { min-height: 44px; padding: 6px 12px; }
