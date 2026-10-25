@@ -22,6 +22,6 @@ export function notifyRestComplete(exerciseName: string) {
     }
   } catch { /* vibration and visual state remain */ }
   if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-    new Notification('Отдых закончен', { body: `Можно продолжать: ${exerciseName}`, icon: `${import.meta.env.BASE_URL}icons/icon-192.png` })
+    new Notification('Отдых закончен', { body: `Можно продолжать: ${exerciseName}`, icon: `${import.meta.env.BASE_URL}icon.svg` })
   }
 }

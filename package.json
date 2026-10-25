@@ -14,10 +14,15 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:postgres": "node tests/postgres/history.integration.mjs",
-    "test:all": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:proposal && pnpm test:postgres && pnpm build",
+    "test:checks": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:proposal && pnpm test:release && pnpm test:postgres",
+    "test:all": "pnpm test:checks && pnpm build",
     "preview": "vite preview",
     "dev:local": "vite --config tests/local-browser/vite.config.mjs",
-    "test:proposal": "node --test proposals/program-v2/model.test.mjs proposals/program-v2/local-integration.test.mjs"
+    "test:proposal": "node --test proposals/program-v2/model.test.mjs proposals/program-v2/local-integration.test.mjs",
+    "test:release": "node --test tests/build-release.integration.mjs",
+    "test:browser:product": "node tests/browser/product-audit.mjs",
+    "test:browser:secondary": "node tests/browser/secondary-audit.mjs",
+    "test:browser:auth": "node --env-file=.env.audit.local tests/browser/real-auth-ui.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -43,6 +48,7 @@
     "embedded-postgres": "18.4.0-beta.17",
     "jsdom": "^30.0.1",
     "oxlint": "^1.79.0",
+    "playwright": "1.62.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11",

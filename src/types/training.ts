@@ -89,6 +89,8 @@ export type PreviousResult = {
 }
 
 export type HistoryWorkout = {
+  revision?: number
+  updatedAt?: string
   id: string
   templateCode: string | null
   title: string

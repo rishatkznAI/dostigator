@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict'
+import {mkdir,writeFile} from 'node:fs/promises'
+import {resolve} from 'node:path'
+import {chromium} from 'playwright'
+const out=resolve(process.env.DOSTIGATOR_AUDIT_OUTPUT||'.cache/pwa-audit');await mkdir(out,{recursive:true})
+const api='http://127.0.0.1:4210',origin='http://127.0.0.1:4213'
+const {ownerA,tokens}=await(await fetch(api+'/__test/identities')).json()
+const b=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}:{})});const ctx=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await ctx.newPage();const result={checks:[],errors:[],failures:[]};p.on('pageerror',e=>result.errors.push(e.message));const check=(name,ok=true)=>{assert.ok(ok,name);result.checks.push(name);console.log('PASS '+name)}
+const mode=value=>fetch(api+'/__test/mode?value='+value);const unavailable=value=>fetch(origin+'/__test/unavailable?value='+value)
+const stored=()=>p.evaluate(owner=>JSON.parse(localStorage.getItem('trainlog:active:'+owner)),ownerA)
+try{
+ await unavailable(0);await mode('online');await p.goto(origin+'/__test/login');await p.waitForURL('**/training');await p.evaluate(()=>navigator.serviceWorker.ready);await p.reload();await p.waitForFunction(()=>navigator.serviceWorker.controller!==null);check('generated production service worker controls the app')
+ await p.goto(origin+'/training/workout/A');await p.getByRole('button',{name:'Начать тренировку',exact:true}).click();await p.getByRole('spinbutton',{name:/подход 1, вес/}).fill('40');await p.getByRole('button',{name:/^Записать подход 1/}).click();await p.getByText('Сохранено в облаке',{exact:true}).waitFor();const id=(await stored()).id
+ await mode('offline');await unavailable(1);const response=await p.reload();check('app reloads from real SW cache when static origin returns 503',response.fromServiceWorker());await p.getByRole('spinbutton',{name:/подход 2, вес/}).fill('42.5');await p.getByRole('button',{name:/^Записать подход 2/}).click();await p.waitForTimeout(800);await p.reload();await p.getByRole('spinbutton',{name:/подход 3, вес/}).waitFor();check('API outage and a second reload retain two recorded sets',(await stored()).exercises.flatMap(e=>e.sets).filter(s=>s.done).length===2);await p.screenshot({path:resolve(out,'390-real-pwa-offline.png'),fullPage:true})
+ await unavailable(0);await mode('online');await ctx.setOffline(true);await p.reload();await p.getByRole('spinbutton',{name:/подход 3, вес/}).fill('45');await p.getByRole('button',{name:/^Записать подход 3/}).click();await p.waitForTimeout(800);await p.reload();await p.locator('.workout-progress-panel strong').waitFor();check('browser network offline retains a third set through a full reload',(await stored()).exercises.flatMap(e=>e.sets).filter(s=>s.done).length===3)
+ await ctx.setOffline(false);await p.getByText('Сохранено в облаке',{exact:true}).waitFor();check('online event synchronizes the restored workout')
+ await p.getByRole('button',{name:'Завершить',exact:true}).click();await p.getByRole('button',{name:'Сохранить неполную тренировку',exact:true}).click();await p.waitForURL('**/training/history?finished=*');await p.getByText('Синхронизировано с сервером',{exact:true}).first().waitFor()
+ const headers={Authorization:'Bearer '+tokens.ownerA};const rows=await(await fetch(api+`/rest/v1/workout_sessions?id=eq.${id}`,{headers})).json();const sets=await(await fetch(api+`/rest/v1/workout_sets?session_id=eq.${id}&done=eq.true`,{headers})).json();check('reconnect creates one completed session with exactly three facts',rows.length===1&&rows[0].finished_at!==null&&sets.length===3)
+ check('PWA has no unhandled JavaScript errors',result.errors.length===0)
+}catch(e){result.failures.push({message:e.message,stack:e.stack});await p.screenshot({path:resolve(out,'failure.png'),fullPage:true}).catch(()=>{});process.exitCode=1}finally{await ctx.setOffline(false);await unavailable(0);await mode('online');await writeFile(resolve(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));await b.close()}

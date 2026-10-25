@@ -8,7 +8,7 @@ const session={access_token:tokens.ownerA,refresh_token:'test-fixture',expires_a
 createServer(async(req,res)=>{
  const path=new URL(req.url,'http://localhost').pathname
  if(path==='/__test/unavailable'){unavailable=new URL(req.url,'http://localhost').searchParams.get('value')==='1';res.end(String(unavailable));return}
- if(path==='/__test/login'){res.setHeader('Content-Type','text/html');res.end(`<script>localStorage.setItem('sb-127-auth-token',${JSON.stringify(JSON.stringify(session))});localStorage.setItem('dostigator:onboarding:v1:${ownerA}','skipped');location.replace('/training')</script>`);return}
+ if(path==='/__test/login'){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<script>localStorage.setItem('sb-127-auth-token',${JSON.stringify(JSON.stringify(session))});localStorage.setItem('dostigator:onboarding:v1:${ownerA}','skipped');location.replace('/training')</script>`);return}
  if(unavailable){res.writeHead(503);res.end('Offline test: static origin unavailable');return}
  const file=resolve(root,'.'+path);if(!file.startsWith(root+'/')){res.writeHead(403);res.end();return}
  const mime={'.js':'application/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.webmanifest':'application/manifest+json','.woff2':'font/woff2'}

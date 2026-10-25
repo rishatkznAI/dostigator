@@ -1,5 +1,5 @@
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Copy, Footprints, Pencil, Plus, Trash2, Utensils, X } from 'lucide-react'
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useLayoutEffect, useState } from 'react'
 import { deleteNutritionEntry, loadDailyActivity, loadNutritionEntries, saveDailyActivity, saveNutritionEntry } from '../lib/trainingRepository'
 import { createId } from '../lib/workout'
 import { localDateKey, localDateTimeInput, MEAL_TYPE_LABELS, type MealType } from '../lib/week'
@@ -39,27 +39,37 @@ export function NutritionJournal() {
   const [savingSteps, setSavingSteps] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const loadGeneration = useRef(0)
+  const stepsDirty = useRef(false)
+  const currentDate = useRef(selectedDate)
+  const mealLock = useRef(false)
+  const stepsLock = useRef(false)
+  useLayoutEffect(()=>{currentDate.current=selectedDate;return ()=>{loadGeneration.current+=1}},[selectedDate])
 
   const load = useCallback(async () => {
     const { start, end } = rangeForDate(selectedDate)
+    const generation=++loadGeneration.current
     setLoading(true)
     try {
       const [nextEntries, nextActivity] = await Promise.all([
         loadNutritionEntries(start, end),
         loadDailyActivity(selectedDate, selectedDate),
       ])
+      if(generation!==loadGeneration.current || currentDate.current!==selectedDate)return
       setEntries(nextEntries)
       setActivity(nextActivity[0] ?? null)
-      setSteps(nextActivity[0]?.steps.toString() ?? '')
+      if(!stepsDirty.current)setSteps(nextActivity[0]?.steps.toString() ?? '')
       setError(null)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить дневник')
+      if(generation===loadGeneration.current)setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить дневник')
     } finally {
-      setLoading(false)
+      if(generation===loadGeneration.current)setLoading(false)
     }
   }, [selectedDate])
 
   useEffect(() => {
+    stepsDirty.current=false
+    setSteps('');setActivity(null);setEntries([])
     setEatenAt(timeForDate(selectedDate))
     setEditId(null)
     void load()
@@ -87,7 +97,8 @@ export function NutritionJournal() {
 
   const submitMeal = async (event: FormEvent) => {
     event.preventDefault()
-    if (!description.trim()) return
+    if (!description.trim() || mealLock.current) return
+    mealLock.current=true
     setSavingMeal(true)
     setMessage(null)
     setError(null)
@@ -108,24 +119,30 @@ export function NutritionJournal() {
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Не удалось сохранить запись')
     } finally {
+      mealLock.current=false
       setSavingMeal(false)
     }
   }
 
   const submitSteps = async (event: FormEvent) => {
     event.preventDefault()
+    if(stepsLock.current || loading || steps==='')return
     const value = Number(steps)
     if (!Number.isInteger(value) || value < 0 || value > 100000) return
+    stepsLock.current=true
     setSavingSteps(true)
     setMessage(null)
     setError(null)
     try {
       const saved = await saveDailyActivity({ id: activity?.id ?? createId(), activityDate: selectedDate, steps: value })
+      stepsDirty.current=false
       setActivity(saved)
       setMessage('Шаги сохранены')
+      await load()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Не удалось сохранить шаги')
     } finally {
+      stepsLock.current=false
       setSavingSteps(false)
     }
   }
@@ -150,9 +167,9 @@ export function NutritionJournal() {
   return (
     <div className="journal-sections">
       <section className="day-picker-card">
-        <button type="button" aria-label="Предыдущий день" onClick={() => setSelectedDate(shiftDay(selectedDate, -1))}><ChevronLeft /></button>
-        <label><CalendarDays /><span>День дневника</span><input type="date" max={today} value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label>
-        <button type="button" aria-label="Следующий день" disabled={selectedDate >= today} onClick={() => setSelectedDate(shiftDay(selectedDate, 1))}><ChevronRight /></button>
+        <button type="button" aria-label="Предыдущий день" disabled={savingMeal||savingSteps} onClick={() => setSelectedDate(shiftDay(selectedDate, -1))}><ChevronLeft /></button>
+        <label><CalendarDays /><span>День дневника</span><input type="date" disabled={savingMeal||savingSteps} max={today} value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label>
+        <button type="button" aria-label="Следующий день" disabled={selectedDate >= today||savingMeal||savingSteps} onClick={() => setSelectedDate(shiftDay(selectedDate, 1))}><ChevronRight /></button>
       </section>
 
       <section className="nutrition-targets">
@@ -163,14 +180,14 @@ export function NutritionJournal() {
 
       <section className="steps-entry-card">
         <div><Footprints /><div><p className="eyebrow">{selectedDate === today ? 'Сегодня' : 'Выбранный день'}</p><h2>Сколько шагов?</h2></div></div>
-        <form onSubmit={submitSteps}><label htmlFor="daily-steps">Шаги</label><input id="daily-steps" type="number" inputMode="numeric" min="0" max="100000" step="1" placeholder="Например, 8500" value={steps} onChange={(event) => setSteps(event.target.value)} /><button className="primary-button" type="submit" disabled={savingSteps || steps === ''}>{savingSteps ? 'Сохраняем…' : 'Сохранить'}</button></form>
+        <form onSubmit={submitSteps}><label htmlFor="daily-steps">Шаги</label><input id="daily-steps" type="number" inputMode="numeric" min="0" max="100000" step="1" placeholder="Например, 8500" value={steps} disabled={savingSteps} onChange={(event) => {stepsDirty.current=true;setSteps(event.target.value)}} /><button className="primary-button" type="submit" disabled={loading || savingSteps || steps === ''}>{savingSteps ? 'Сохраняем…' : 'Сохранить'}</button></form>
       </section>
 
       <form className="nutrition-entry-form" onSubmit={submitMeal}>
-        <div className="form-heading"><div><p className="eyebrow">{editId ? 'Редактирование' : 'Дневник еды'}</p><h2>{editId ? 'Изменить запись' : 'Что вы ели?'}</h2></div>{editId ? <button type="button" className="icon-button" onClick={resetForm} aria-label="Отменить редактирование"><X /></button> : <Utensils />}</div>
-        <div className="form-row"><label>Приём пищи<select value={mealType} onChange={(event) => setMealType(event.target.value as MealType)}>{Object.entries(MEAL_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Когда<input type="datetime-local" value={eatenAt} onChange={(event) => setEatenAt(event.target.value)} required /></label></div>
-        <label>Описание<textarea maxLength={1000} rows={3} placeholder="Например: шаурма с курицей, без картошки" value={description} onChange={(event) => setDescription(event.target.value)} required /></label>
-        <div className="form-row three-fields"><label>Калории<input type="number" inputMode="numeric" min="0" max="5000" placeholder="необязательно" value={calories} onChange={(event) => setCalories(event.target.value)} /></label><label>Белок, г<input type="number" inputMode="decimal" min="0" max="500" step="0.1" placeholder="необязательно" value={protein} onChange={(event) => setProtein(event.target.value)} /></label><label>Алкоголь, порции<input type="number" inputMode="decimal" min="0" max="100" step="0.5" placeholder="0" value={alcohol} onChange={(event) => setAlcohol(event.target.value)} /></label></div>
+        <div className="form-heading"><div><p className="eyebrow">{editId ? 'Редактирование' : 'Дневник еды'}</p><h2>{editId ? 'Изменить запись' : 'Что вы ели?'}</h2></div>{editId ? <button type="button" className="icon-button" disabled={savingMeal} onClick={resetForm} aria-label="Отменить редактирование"><X /></button> : <Utensils />}</div>
+        <div className="form-row"><label>Приём пищи<select disabled={savingMeal} value={mealType} onChange={(event) => setMealType(event.target.value as MealType)}>{Object.entries(MEAL_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Когда<input disabled={savingMeal} type="datetime-local" value={eatenAt} onChange={(event) => setEatenAt(event.target.value)} required /></label></div>
+        <label>Описание<textarea disabled={savingMeal} maxLength={1000} rows={3} placeholder="Например: шаурма с курицей, без картошки" value={description} onChange={(event) => setDescription(event.target.value)} required /></label>
+        <div className="form-row three-fields"><label>Калории<input type="number" inputMode="numeric" min="0" max="5000" placeholder="необязательно" disabled={savingMeal} value={calories} onChange={(event) => setCalories(event.target.value)} /></label><label>Белок, г<input type="number" inputMode="decimal" min="0" max="500" step="0.1" placeholder="необязательно" disabled={savingMeal} value={protein} onChange={(event) => setProtein(event.target.value)} /></label><label>Алкоголь, порции<input type="number" inputMode="decimal" min="0" max="100" step="0.5" placeholder="0" disabled={savingMeal} value={alcohol} onChange={(event) => setAlcohol(event.target.value)} /></label></div>
         <p className="journal-hint">Одна порция — примерно 330 мл пива или 150 мл вина. Точные калории указывать необязательно.</p>
         <button className="primary-button wide" type="submit" disabled={savingMeal || !description.trim()}><Plus />{savingMeal ? 'Сохраняем…' : editId ? 'Сохранить изменения' : 'Добавить приём пищи'}</button>
       </form>
@@ -190,7 +207,7 @@ export function NutritionJournal() {
             <article key={entry.id}>
               <time>{new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.eaten_at))}</time>
               <div><span>{MEAL_TYPE_LABELS[entry.meal_type as MealType] ?? 'Другое'}</span><strong>{entry.description}</strong>{(entry.calories !== null || entry.protein_g !== null || entry.alcohol_units !== null) && <small>{[entry.calories !== null ? `${entry.calories} ккал` : '', entry.protein_g !== null ? `${entry.protein_g} г белка` : '', entry.alcohol_units !== null ? `${entry.alcohol_units} порц. алкоголя` : ''].filter(Boolean).join(' · ')}</small>}</div>
-              <div className="entry-actions"><button type="button" onClick={() => fillForm(entry, false)} aria-label={`Повторить: ${entry.description}`}><Copy /></button><button type="button" onClick={() => fillForm(entry, true)} aria-label={`Изменить: ${entry.description}`}><Pencil /></button><button type="button" onClick={() => void removeEntry(entry)} aria-label={`Удалить: ${entry.description}`}><Trash2 /></button></div>
+              <div className="entry-actions"><button type="button" disabled={savingMeal} onClick={() => fillForm(entry, false)} aria-label={`Повторить: ${entry.description}`}><Copy /></button><button type="button" disabled={savingMeal} onClick={() => fillForm(entry, true)} aria-label={`Изменить: ${entry.description}`}><Pencil /></button><button type="button" disabled={savingMeal} onClick={() => void removeEntry(entry)} aria-label={`Удалить: ${entry.description}`}><Trash2 /></button></div>
             </article>
           ))}</div>
         )}
