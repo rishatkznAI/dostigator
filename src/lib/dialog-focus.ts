@@ -1,5 +1,6 @@
 // Closed details contain focusable DOM nodes which the browser excludes from Tab order.
 export function visibleDialogControl(element: HTMLElement) {
+  if (element.closest('[inert]')) return false
   if (element.closest('[hidden]')) return false
   const closed = element.closest('details:not([open])')
   if (closed && !(element.tagName === 'SUMMARY' && element.parentElement === closed)) return false

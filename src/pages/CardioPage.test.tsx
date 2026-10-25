@@ -11,7 +11,8 @@ describe('cardio page', () => {
 
     expect(screen.getByRole('heading', { name: 'Кардио' })).toBeInTheDocument()
     expect(screen.queryByRole('radio')).not.toBeInTheDocument()
-    expect(screen.getByText('Темп и безопасность').closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByRole('button', { name: 'Темп и безопасность' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('link', { name: 'Интенсивность · CDC' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('Темп и безопасность'))
     expect(screen.getByRole('link', { name: 'Интенсивность · CDC' })).toBeInTheDocument()
   })

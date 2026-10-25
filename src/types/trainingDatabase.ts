@@ -236,6 +236,12 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      cardio_result_photos: {
+        Row: { id: string; user_id: string; cardio_id: string; object_path: string; byte_size: number; sha256: string; created_at: string; deleted_at: string | null }
+        Insert: Omit<Database['public']['Tables']['cardio_result_photos']['Row'], 'created_at' | 'deleted_at'> & { created_at?: string; deleted_at?: string | null }
+        Update: { deleted_at?: string | null }
+        Relationships: []
+      }
       daily_activity: {
         Row: {
           id: string

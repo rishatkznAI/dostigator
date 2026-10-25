@@ -1,0 +1,65 @@
+.training-module .cardio-activity-label select {
+  height: 54px;
+}
+
+.cardio-treadmill-settings {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line, #3a3d48);
+  border-radius: 16px;
+}
+
+.cardio-treadmill-settings legend {
+  max-width: 100%;
+  padding: 0 5px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.cardio-treadmill-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 12px;
+}
+
+.cardio-treadmill-inputs label,
+.cardio-treadmill-inputs input {
+  min-width: 0;
+  width: 100%;
+}
+
+.cardio-treadmill-inputs label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.cardio-treadmill-inputs input {
+  min-height: 48px;
+}
+
+.cardio-settings-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 10px 0;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.cardio-settings-facts > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cardio-settings-facts dt {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.cardio-settings-facts dd {
+  margin: 3px 0 0;
+  font-weight: 650;
+}

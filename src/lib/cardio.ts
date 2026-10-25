@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { localDate } from './date'
 import { loadCardioReceipt } from './cardio-receipts'
 import { loadCardioDetails } from './cardio-details'
+import { deleteCardioResultPhotos } from './cardio-photos'
 
 export type CardioSession = TableRow<'cardio_sessions'> & {
   duration_seconds?: number | null; workout_session_id?: string | null
@@ -163,6 +164,9 @@ export function syncCardio(userId:string):Promise<void> {
       if(deleting && !confirmed.deleted_at) throw new Error('Сервер не подтвердил удаление кардио')
       localStorage.setItem(cacheKey(userId),JSON.stringify(mergeCardio(records(cacheKey(userId)),[confirmed])))
       if(deleting) {
+        // Keep the delete in the durable queue until both the result and its
+        // private images are removed. A lost response is safe to replay.
+        await deleteCardioResultPhotos(userId, id)
         localStorage.setItem(deleteKey(userId),JSON.stringify(getCardioDeletes(userId).filter(x=>x!==id)))
         delete meta[id];localStorage.setItem(deleteMetaKey(userId),JSON.stringify(meta))
       } else {

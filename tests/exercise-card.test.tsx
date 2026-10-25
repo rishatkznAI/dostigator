@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExerciseCard } from '../src/components/ExerciseCard'
 import type { PreviousResult, WorkoutExerciseDraft } from '../src/types/training'
@@ -28,7 +28,7 @@ const previous: PreviousResult = {
 describe('exercise card', () => {
   beforeEach(() => localStorage.clear())
   afterEach(cleanup)
-  it('shows previous result and database-backed instructions', () => {
+  it('shows previous result and database-backed instructions', async () => {
     render(<ExerciseCard exercise={exercise} previous={previous} onRecordSet={vi.fn()} onUndoSet={vi.fn()} onSkipSet={vi.fn()} onAddSet={vi.fn()} onRemoveSet={vi.fn()} onSkip={vi.fn()} onReplace={vi.fn()} alternatives={[]} />)
     expect(screen.getAllByText(/60 кг × 12/)[0]).toBeInTheDocument()
     fireEvent.click(screen.getByText('Разминка и замена упражнения'))
@@ -52,7 +52,7 @@ describe('exercise card', () => {
     fireEvent.keyDown(window, { key: 'Tab' })
     expect(closeButton).toHaveFocus()
     fireEvent.click(closeButton)
-    expect(opener).toHaveFocus()
+    await waitFor(() => expect(opener).toHaveFocus())
   })
 
   it('keeps work-set comparisons aligned when a warmup is inserted', () => {

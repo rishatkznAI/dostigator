@@ -4,7 +4,7 @@ export function CardioBackup({userId,onRestore}:{userId:string;onRestore:()=>Pro
   const [candidate,setCandidate]=useState<{backup:Backup;mutation:string}|null>(null)
   const [busy,setBusy]=useState(false),[message,setMessage]=useState('')
   const run=async(task:()=>Promise<void>)=>{if(busy)return;setBusy(true);setMessage('');try{await task()}catch(reason){setMessage(reason instanceof Error?reason.message:'Не удалось обработать копию кардио')}finally{setBusy(false)}}
-  return <details className="training-extras"><summary>Резервная копия кардио</summary><p>Копия содержит точное время, связь с силовой, настройки и отметки удаления. Для восстановления связанная силовая должна уже существовать в аккаунте. Отличающиеся серверные записи не перезаписываются.</p><button type="button" className="training-secondary" disabled={busy} onClick={()=>void run(async()=>{
+  return <details className="training-extras"><summary>Резервная копия кардио</summary><p>Копия содержит точное время, связь с силовой, настройки и отметки удаления. Фотографии в этот JSON не входят; синхронизированные фото хранятся в аккаунте отдельно. Для восстановления связанная силовая должна уже существовать в аккаунте. Отличающиеся серверные записи не перезаписываются.</p><button type="button" className="training-secondary" disabled={busy} onClick={()=>void run(async()=>{
     const backup=await exportCardioBackup(userId),url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}))
     const link=document.createElement('a');link.href=url;link.download=`dostigator-cardio-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
     setMessage('Облачная копия кардио подготовлена')
