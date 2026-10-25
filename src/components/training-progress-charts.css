@@ -1,0 +1,30 @@
+.training-progress-page { min-width: 0; overflow-wrap: anywhere; }
+.training-progress-page .training-session-card > label { min-width: 0; }
+.training-progress-page select { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.training-progress-charts { min-width: 0; margin: 18px 0; }
+.training-metric-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.training-metric-switch button { flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #3e414b; border-radius: 11px; color: #d7dbe2; background: #15171e; font: inherit; font-size: 13px; font-weight: 750; line-height: 1.4; overflow-wrap: anywhere; cursor: pointer; }
+.training-metric-switch button[aria-pressed="true"] { border-color: #ffcf5a; color: #ffcf5a; background: #2b2719; }
+.training-metric-switch button:focus-visible, .training-metric-values summary:focus-visible, .training-comparable-toggle:focus-within { outline: 2px solid #fff; outline-offset: 3px; }
+.training-progress-charts .training-chart-context { margin: 10px 0; color: #b8bfcb; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.training-progress-charts .training-comparable-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 8px 0; color: #e6e8ed; font-size: 13px; line-height: 1.5; cursor: pointer; }
+.training-progress-charts .training-comparable-toggle input { flex: 0 0 auto; width: 20px; height: 20px; margin: 0; accent-color: #ffcf5a; }
+.training-metric-plot { min-width: 0; margin: 16px 0 0; padding: 14px; border: 1px solid #343943; border-radius: 14px; background: #11141b; }
+.training-metric-plot figcaption { display: grid; gap: 5px; margin-bottom: 16px; overflow-wrap: anywhere; }
+.training-metric-plot figcaption strong { color: #eef0f4; font-size: 14px; line-height: 1.45; }
+.training-metric-plot figcaption span { color: #ffcf5a; font-size: 13px; line-height: 1.5; }
+.training-metric-canvas { display: grid; grid-template-columns: minmax(25px, max-content) minmax(0, 1fr); gap: 8px; height: 160px; min-width: 0; }
+.training-metric-y { display: flex; flex-direction: column; justify-content: space-between; padding: 5px 0; color: #acb5c4; font-size: 11px; line-height: 1.4; text-align: right; }
+.training-metric-canvas svg { display: block; width: 100%; height: 160px; overflow: visible; }
+.training-metric-grid { fill: none; stroke: #303541; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.training-metric-line { fill: none; stroke: #ffcf5a; stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.training-metric-dot { fill: #ffcf5a; stroke: #11141b; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.training-metric-bar { fill: #e9ba4e; }
+.training-metric-x { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 7px 0 0 33px; color: #acb5c4; font-size: 11px; line-height: 1.4; }
+.training-metric-empty { min-height: 110px; display: grid; align-content: center; color: #b8bfcb; font-size: 13px; line-height: 1.6; }
+.training-metric-values { margin-top: 14px; min-width: 0; }
+.training-metric-values summary { display: flex; align-items: center; min-height: 44px; color: #e1c681; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.training-metric-values ol { display: grid; gap: 10px; padding: 0; margin: 8px 0 0; list-style: none; }
+.training-metric-values li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 8px; padding: 9px 0; border-top: 1px solid #2d323c; color: #d0d5dd; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.training-metric-values li > span { text-align: right; }
+.training-metric-values small { display: block; color: #aeb7c5; font-size: 11px; line-height: 1.5; }

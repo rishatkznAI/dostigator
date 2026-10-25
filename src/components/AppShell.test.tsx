@@ -143,11 +143,13 @@ describe('sync status', () => {
   it('provides a named primary navigation with readable link labels', () => {
     renderShell()
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
-    for (const label of ['Сегодня', 'Тренировки', 'Питание', 'Прогресс', 'Обзор', 'Профиль']) {
+    for (const label of ['Сегодня', 'Зал', 'Питание', 'Цели', 'Профиль']) {
       expect(within(navigation).getByRole('link', { name: label })).toBeVisible()
     }
     expect(within(navigation).getByRole('link', { name: 'Питание' })).toHaveAttribute('href', '/nutrition')
-    expect(within(navigation).queryByRole('link', { name: 'Цели' })).not.toBeInTheDocument()
+    expect(within(navigation).getByRole('link', { name: 'Цели' })).toHaveAttribute('href', '/progress')
+    expect(within(navigation).queryByRole('link', { name: 'Обзор' })).not.toBeInTheDocument()
+    expect(within(navigation).queryByRole('link', { name: 'Дневник' })).not.toBeInTheDocument()
     expect(within(navigation).queryByRole('link', { name: 'Привычки' })).not.toBeInTheDocument()
   })
 
@@ -155,7 +157,7 @@ describe('sync status', () => {
     mocks.onboardingStatus = 'active'
     render(<MemoryRouter initialEntries={['/onboarding']}><Routes><Route element={<AppShell />}><Route path="onboarding" element={<p>Знакомство</p>} /><Route path="training" element={<p>Тренировки открыты</p>} /></Route></Routes></MemoryRouter>)
 
-    await userEvent.click(screen.getByRole('link', { name: 'Тренировки' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Зал' }))
 
     expect(mocks.skipOnboarding).toHaveBeenCalledTimes(1)
     expect(screen.getByText('Тренировки открыты')).toBeInTheDocument()

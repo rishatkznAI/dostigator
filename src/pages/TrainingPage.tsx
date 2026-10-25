@@ -84,6 +84,8 @@ export function TrainingPage() {
         <Link to="/training/body"><Ruler /><span>Замеры</span></Link>
       </nav>
 
+      <Link className="cardio-entry-card" to="/training/exercises"><div className="cardio-entry-icon"><Play /></div><div><span>На любой день</span><strong>Каталог и свободная тренировка</strong><small>Выбрать упражнения или добавить своё вне программы A/B/C</small></div><ArrowRight /></Link>
+
       <section className="week-card">
         <div className="week-card-heading">
           <div>

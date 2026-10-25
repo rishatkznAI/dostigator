@@ -19,6 +19,14 @@
   --success: #91d887;
   --danger: #ff8f8f;
   --nav-height: 78px;
+  --ui-target: 44px;
+  --ui-control-height: 48px;
+  --ui-control-radius: 14px;
+  --ui-card-radius: 22px;
+  --ui-space-sm: 8px;
+  --ui-space-md: 12px;
+  --ui-space-lg: 16px;
+  --ui-space-xl: 20px;
 }
 
 * { box-sizing: border-box; }
@@ -27,7 +35,7 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradie
 button, input, textarea, select { font: inherit; }
 input, textarea, select { font-size: 1rem; }
 button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-button { min-width: 24px; min-height: 44px; color: inherit; }
+button { min-width: 24px; min-height: var(--ui-target); color: inherit; }
 a[href] { min-height: 24px; }
 a { color: inherit; text-decoration: none; }
 a[href]:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
@@ -55,16 +63,17 @@ h1, h2, h3, strong { letter-spacing: -0.025em; }
 .mini-icon.danger { color: var(--danger); }
 .mini-icon svg { width: 17px; height: 17px; }
 
-.primary-button, .secondary-button { min-height: 48px; border-radius: 14px; border: 1px solid transparent; padding: 0 18px; font-weight: 800; display: inline-flex; gap: 8px; justify-content: center; align-items: center; cursor: pointer; }
+.primary-button, .secondary-button, a.primary-button, a.secondary-button { min-height: var(--ui-control-height); border-radius: var(--ui-control-radius); border: 1px solid transparent; padding: 0 18px; font-weight: 800; display: inline-flex; gap: var(--ui-space-sm); justify-content: center; align-items: center; cursor: pointer; }
 .primary-button { color: #17140c; background: var(--accent); }
 .secondary-button { color: var(--text); background: transparent; border-color: var(--line); }
 .primary-button:disabled, .secondary-button:disabled, .icon-button:disabled { opacity: .4; cursor: not-allowed; }
 
-.bottom-nav { position: fixed; z-index: 20; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(calc(100% - 20px), 760px); height: var(--nav-height); padding: 8px; border: 1px solid #2b2d36; border-radius: 24px; background: #111218ef; backdrop-filter: blur(20px); display: grid; grid-template-columns: repeat(7, 1fr); box-shadow: 0 18px 60px #000a; }
+.bottom-nav { position: fixed; z-index: 20; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(calc(100% - 20px), 760px); height: var(--nav-height); padding: 8px; border: 1px solid #2b2d36; border-radius: 24px; background: #111218ef; backdrop-filter: blur(20px); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); box-shadow: 0 18px 60px #000a; }
 .bottom-nav .app-brand { display: none; }
-.bottom-nav a { min-width: 0; min-height: 54px; border-radius: 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--text-secondary); font-weight: 700; font-size: .75rem; }
+.bottom-nav a { min-width: 0; min-height: var(--ui-control-height); border-radius: var(--ui-control-radius); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--text-secondary); font-weight: 700; font-size: .75rem; }
 .bottom-nav a.active { color: var(--accent); background: #ffc8570d; }
 .bottom-nav svg { width: 21px; height: 21px; }
+.bottom-nav .nav-label { font-size: .75rem; white-space: nowrap; }
 .banner-stack { width: min(calc(100% - 28px), 732px); margin: 12px auto 0; display: grid; gap: 8px; }
 .sync-banner { position: static; width: 100%; min-width: 0; padding: 10px 15px; border-radius: 13px; background: #3e3317; color: #ffe5a0; border: 1px solid #80682c; text-align: center; font-size: .8125rem; font-weight: 700; line-height: 1.45; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; overflow-wrap: anywhere; }
 .sync-banner > span { min-width: 0; }
@@ -212,7 +221,7 @@ button.empty-card { cursor: pointer; }
 .goal-status-card p:last-child { color: var(--muted); line-height: 1.5; }
 .goal-status-card > div:last-child { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
 
-.inline-create-card, .settings-card, .review-form { padding: 20px; border-radius: 22px; border: 1px solid var(--line); background: var(--panel); }
+.inline-create-card, .settings-card, .review-form { padding: var(--ui-space-xl); border-radius: var(--ui-card-radius); border: 1px solid var(--line); background: var(--panel); }
 .inline-create-card { margin-bottom: 18px; }
 .inline-create-card h2 { margin: 5px 0 18px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -512,9 +521,8 @@ input:focus, textarea:focus, select:focus { border-color: #8c7537; box-shadow: 0
   .auth-card { padding: 22px; }
 }
 
-@media (max-width: 360px) {
-  .bottom-nav .nav-label { font-size: 0; }
-  .bottom-nav .nav-label::after { content: attr(data-short-label); font-size: .62rem; }
+@media (max-width: 430px) {
+  .bottom-nav .nav-label { font-size: .6875rem; white-space: nowrap; }
 }
 
 @media (min-width: 1024px) {
@@ -572,6 +580,7 @@ input:focus, textarea:focus, select:focus { border-color: #8c7537; box-shadow: 0
     gap: 12px;
     font-size: 1rem;
   }
+  .bottom-nav .nav-label { font-size: 1rem; }
   .shell-content { width: 100%; }
   .banner-stack { width: calc(100% - 3.5rem); margin-top: 1.5rem; }
   .app-main { width: 100%; min-height: 100vh; padding-bottom: 48px; }
@@ -589,17 +598,27 @@ input:focus, textarea:focus, select:focus { border-color: #8c7537; box-shadow: 0
   .bottom-nav svg { width: 1.375rem; height: 1.375rem; }
 }
 
-@media (max-width: 600px) {
-  .bottom-nav .nav-label { font-size: 0; }
-  .bottom-nav .nav-label::after { content: attr(data-short-label); font-size: .75rem; }
-}
-
-
-/* Seven destinations must not collide at standard 375–430px iPhone widths.
-   Full names remain available to assistive technology via aria-label. */
-@media (min-width: 361px) and (max-width: 430px) {
-  .bottom-nav .nav-label { font-size: 0; }
-  .bottom-nav .nav-label::after { content: attr(data-short-label); font-size: .66rem; }
+/* Today brings the existing goal, gym and food records together. */
+.today-active-workout { display: grid; gap: var(--ui-space-lg); margin-bottom: 14px; padding: var(--ui-space-xl); border: 1px solid #7b6330; border-radius: var(--ui-card-radius); background: linear-gradient(135deg, #292215, #15151a); }
+.today-active-workout h2 { margin: 6px 0 8px; font-size: 1.3rem; line-height: 1.3; overflow-wrap: anywhere; }
+.today-active-workout p:last-child { margin: 0; color: var(--text-secondary); font-size: .85rem; line-height: 1.5; }
+.today-active-workout .primary-button { justify-self: start; min-height: var(--ui-control-height); padding: 10px 14px; text-align: center; line-height: 1.35; }
+.today-active-workout .primary-button > svg { flex: 0 0 auto; }
+.today-daily-entries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ui-space-md); }
+.today-daily-entries > a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--ui-space-md); padding: var(--ui-space-lg); border: 1px solid var(--line); border-radius: var(--ui-card-radius); background: var(--panel); }
+.today-daily-entries > a > svg { flex-shrink: 0; color: var(--accent); }
+.today-daily-entries > a > svg:last-child { width: 16px; color: var(--text-secondary); }
+.today-daily-entries span { min-width: 0; }
+.today-daily-entries strong { display: block; margin-bottom: 6px; font-size: .9rem; }
+.today-daily-entries small { display: block; color: var(--text-secondary); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+.today-tool-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ui-space-md); margin-top: 14px; }
+.today-tool-links > a { display: flex; min-height: var(--ui-control-height); align-items: center; gap: var(--ui-space-sm); padding: var(--ui-space-md); border: 1px solid var(--line); border-radius: var(--ui-control-radius); font-size: .85rem; font-weight: 700; }
+.today-tool-links > a > svg { flex: 0 0 auto; color: var(--accent); }
+.today-tool-links > a > svg:last-child { width: 16px; margin-left: auto; color: var(--text-secondary); }
+@media (max-width: 480px) {
+  .today-daily-entries { grid-template-columns: minmax(0, 1fr); }
+  .today-tool-links { grid-template-columns: minmax(0, 1fr); }
+  .today-active-workout .primary-button { width: 100%; }
 }
 
 .sheet .history-correction-caption { color: var(--text-secondary); font-size: .85rem; line-height: 1.5; }

@@ -12,7 +12,7 @@ const out = resolve(process.env.DOSTIGATOR_AUDIT_OUTPUT ?? '.cache/iphone-visual
 await mkdir(scratch, { recursive: true }); await mkdir(out, { recursive: true })
 let entry = await readFile('tests/local-browser/main.tsx', 'utf8')
 entry = entry.replace("from './fixtures'", "from '../../tests/local-browser/fixtures'").replace("import './preview.css'", "import '../../tests/local-browser/preview.css'")
-entry = `import { PwaUpdateNotice } from '../../src/components/PwaUpdateNotice'\nconst updateState={available:true,applying:false,message:''}; const controller={subscribe:()=>()=>{},getSnapshot:()=>updateState,defer:()=>{},apply:async()=>{},dispose:()=>{}};\n` + entry
+entry = `import { PwaUpdateNotice } from '../../src/components/PwaUpdateNotice'\nimport { buildInfo } from '../../src/lib/build-info'\nconst updateState={current:buildInfo,latest:{version:'0.2.1',commit:'bbbbbbb',builtAt:null},checkStatus:'available',checkedAt:new Date().toISOString(),checkError:'',available:true,applying:false,message:''}; const controller={subscribe:()=>()=>{},getSnapshot:()=>updateState,defer:()=>{},checkForUpdates:async()=>{},apply:()=>false,dispose:()=>{}};\n` + entry
 entry = entry.replace('.render(<BrowserRouter>', '.render(<><PwaUpdateNotice controller={controller}/><BrowserRouter>').replace('</BrowserRouter>)', '</BrowserRouter></>)')
 await writeFile(resolve(scratch, 'main.tsx'), entry)
 await writeFile(resolve(scratch, 'index.html'), '<html lang="ru"><head><meta name="viewport" content="width=device-width, initial-scale=1.0"/><style>.preview-nav{display:none!important}</style></head><body><div id="root"></div><script type="module" src="/main.tsx"></script></body></html>')
@@ -41,7 +41,7 @@ try {
   for (const width of [375, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     await page.screenshot({ path: resolve(out, `${width}-dashboard-update.png`), fullPage: true, animations: 'disabled' })
-    const measure = await geometry(); assert.equal(measure.overflow, 0); assert.ok(measure.buttons.every(button => button.height >= 44))
+    const measure = await geometry(); assert.equal(measure.overflow, 0); assert.ok(measure.buttons.every(button => button.height >= 44)); assert.ok(measure.banner.height <= 88, 'compact update notice must not take over the mobile viewport')
     result.geometry.push({ screen: 'dashboard', ...measure })
   }
   result.checks.push('Update controls on dashboard fit 375/390/430 without horizontal overflow and have 44px targets')
@@ -55,6 +55,7 @@ try {
     const covered = measure.buttons.filter(button => !button.centerExposed && button.y >= 0 && button.y < measure.viewport.height)
     if (covered.length) result.findings.push({ screen: 'workout-scrolled', width, coveredControls: covered.map(button => button.name), banner: measure.banner, header: measure.header })
   }
+  await page.getByRole('button', { name: 'Подробнее', exact: true }).click()
   await page.getByRole('button', { name: 'Позже', exact: true }).click()
   await page.setViewportSize({ width: 390, height: 844 }); await page.evaluate(() => scrollTo(0, 1100)); await page.waitForTimeout(100)
   const collapsed = await geometry(); result.geometry.push({ screen: 'workout-scrolled-compact', ...collapsed })

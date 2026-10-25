@@ -1,16 +1,14 @@
-import { BarChart3, CircleUserRound, Dumbbell, Home, NotebookPen, TrendingUp, Utensils } from 'lucide-react'
+import { CircleUserRound, Dumbbell, Home, Target, Utensils } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useOnboarding } from '../context/OnboardingContext'
 
 const navigation = [
-  { to: '/', label: 'Сегодня', shortLabel: 'День', icon: Home },
-  { to: '/training', label: 'Тренировки', shortLabel: 'Зал', icon: Dumbbell },
-  { to: '/nutrition', label: 'Питание', shortLabel: 'Еда', icon: Utensils },
-  { to: '/progress', label: 'Прогресс', shortLabel: 'Рост', icon: TrendingUp },
-  { to: '/review', label: 'Обзор', shortLabel: 'Итоги', icon: BarChart3 },
-  { to: '/journal', label: 'Дневник', shortLabel: 'Записи', icon: NotebookPen },
-  { to: '/settings', label: 'Профиль', shortLabel: 'Я', icon: CircleUserRound },
+  { to: '/', label: 'Сегодня', icon: Home },
+  { to: '/training', label: 'Зал', icon: Dumbbell },
+  { to: '/nutrition', label: 'Питание', icon: Utensils },
+  { to: '/progress', label: 'Цели', icon: Target },
+  { to: '/settings', label: 'Профиль', icon: CircleUserRound },
 ]
 
 export function AppShell() {
@@ -40,8 +38,8 @@ export function AppShell() {
       <div className="app-layout">
         <nav className="bottom-nav" aria-label="Основная навигация">
           <Link className="app-brand" to="/" aria-label="Достигатор — на главную" onClick={leaveOnboarding}><span aria-hidden="true">Д</span><strong>Достигатор</strong></Link>
-          {navigation.map(({ to, label, shortLabel, icon: Icon }) => (
-            <NavLink key={to} to={to} end={to === '/'} aria-label={label} onClick={leaveOnboarding}><Icon aria-hidden="true" /><span className="nav-label" data-short-label={shortLabel}>{label}</span></NavLink>
+          {navigation.map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} end={to === '/'} aria-label={label} onClick={leaveOnboarding}><Icon aria-hidden="true" /><span className="nav-label">{label}</span></NavLink>
           ))}
         </nav>
         <div className="shell-content">

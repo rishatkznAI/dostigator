@@ -71,8 +71,8 @@ export function ProgressPage() {
   return <div className="page progress-page">
     <PageHeader
       eyebrow="Движение вперёд"
-      title="Прогресс"
-      text="Результаты, к которым вы идёте, и действия, которые регулярно их поддерживают."
+      title="Цели и привычки"
+      text="Планируйте результаты, выбирайте следующие действия и отмечайте привычки."
       action={<button className="icon-button accent" aria-label={tab === 'goals' ? 'Создать цель' : 'Добавить привычку'} disabled={tab === 'goals' ? goalAdding : habitAdding} aria-busy={tab === 'goals' ? goalAdding : habitAdding} onClick={openCreate}><Plus /></button>}
     />
 

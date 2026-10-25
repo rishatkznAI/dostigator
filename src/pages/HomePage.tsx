@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Check, Flame, Plus, Search, Target, X } from 'lucide-react'
+import { ArrowRight, BarChart3, CalendarDays, Check, Dumbbell, Flame, NotebookPen, Plus, Search, Target, Utensils, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ActionRow } from '../components/ActionRow'
@@ -10,15 +10,29 @@ import { useData } from '../context/DataContext'
 import { localDate, startOfWeek } from '../lib/date'
 import { FOCUS_LIMIT, dailyFocus } from '../lib/focus'
 import { habitStreak, weeklyMetrics } from '../lib/progress'
+import { getActiveDraft } from '../lib/storage'
+import { loadNutritionEntries } from '../lib/trainingRepository'
+import type { NutritionEntry, WorkoutDraft } from '../types/training'
 
 export function HomePage() {
   const { user } = useAuth()
-  const { data, loading, toggleFocus, toggleHabitToday, isMutating } = useData()
+  const { data, loading, online, toggleFocus, toggleHabitToday, isMutating } = useData()
+  const [activeDraft, setActiveDraft] = useState<WorkoutDraft | null>(null)
+  const [nutrition, setNutrition] = useState<{ owner: string; day: string; entries: NutritionEntry[] } | null>(null)
+  const [nutritionUnavailable, setNutritionUnavailable] = useState(false)
   const [showGoalForm, setShowGoalForm] = useState(false)
   const [showFocusChooser, setShowFocusChooser] = useState(false)
   const [focusQuery, setFocusQuery] = useState('')
   const navigate = useNavigate()
   const today = localDate()
+  const owner = user?.id
+  const activeWorkout = activeDraft?.userId === owner && !activeDraft?.finishedAt ? activeDraft : null
+  const recordedSets = activeWorkout?.exercises.reduce((total, exercise) => total + exercise.sets.filter(set => set.done && !set.isWarmup).length, 0) ?? 0
+  const todayNutrition = nutrition && nutrition.owner === owner && nutrition.day === today ? nutrition.entries : null
+  const nutritionFacts = todayNutrition ? [
+    todayNutrition.some(entry => entry.calories !== null) ? `${new Intl.NumberFormat('ru-RU').format(todayNutrition.reduce((total, entry) => total + (entry.calories ?? 0), 0))} ккал` : null,
+    todayNutrition.some(entry => entry.protein_g !== null) ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(todayNutrition.reduce((total, entry) => total + (entry.protein_g ?? 0), 0))} г белка` : null,
+  ].filter(Boolean).join(' · ') : ''
   const activeGoals = data.goals.filter((goal) => goal.status === 'active')
   const focusState = dailyFocus(data.actions, today)
   const focus = focusState.focusedToday
@@ -42,19 +56,49 @@ export function HomePage() {
   const goalAdding = isMutating('goal-add')
 
   useEffect(() => {
+    const refreshActive = () => {
+      try { setActiveDraft(owner ? getActiveDraft(owner) : null) }
+      catch { setActiveDraft(null) }
+    }
+    refreshActive()
+    window.addEventListener('storage', refreshActive)
+    window.addEventListener('focus', refreshActive)
+    return () => { window.removeEventListener('storage', refreshActive); window.removeEventListener('focus', refreshActive) }
+  }, [owner])
+
+  useEffect(() => {
+    let current = true
+    setNutrition(null)
+    setNutritionUnavailable(false)
+    if (!owner || online === false) { setNutritionUnavailable(true); return }
+    const from = new Date(`${today}T00:00:00`)
+    const to = new Date(from)
+    to.setDate(to.getDate() + 1)
+    void loadNutritionEntries(from, to).then(entries => {
+      if (current) setNutrition({ owner, day: today, entries: entries.filter(entry => entry.user_id === owner) })
+    }).catch(() => { if (current) setNutritionUnavailable(true) })
+    return () => { current = false }
+  }, [owner, today, online])
+
+  useEffect(() => {
     if (focusState.availableSlots === 0) {
       setShowFocusChooser(false)
       setFocusQuery('')
     }
   }, [focusState.availableSlots])
 
-  return <div className="page home-page">
+  return <div className="page home-page today-page">
     <PageHeader eyebrow="Достигатор" title={`Сегодня, ${name}`} text="Не нужно успеть всё. Доведите главное." action={<button className="icon-button accent" aria-label="Создать цель" disabled={goalAdding} aria-busy={goalAdding} onClick={() => setShowGoalForm(true)}><Plus /></button>} />
 
-    <section className="score-card">
-      <div><p className="eyebrow">Дисциплина недели</p><h2>{score === null ? 'Недостаточно данных' : score >= 80 ? 'Сильный ритм' : score >= 50 ? 'Набираете темп' : 'Начните с одного шага'}</h2><p>{score === null ? 'Выберите одно из трёх главных действий, добавьте привычку или первый шаг.' : '50% — выполненный фокус, 30% — привычки, 20% — недельная цель 5 действий. План растёт по дням; пустые категории не снижают максимум.'}</p></div>
-      {score === null ? <div className="score-placeholder" aria-label="Индекс дисциплины: недостаточно данных"><strong>—</strong><span>нет данных</span></div> : <ProgressRing value={score} label="из 100" />}
-    </section>
+    {activeWorkout && <section className="today-active-workout" aria-labelledby="today-active-workout-title">
+      <div><p className="eyebrow">Тренировка уже начата</p><h2 id="today-active-workout-title">{activeWorkout.title}</h2><p>Записано рабочих подходов: {recordedSets}. Продолжи с сохранённого места.</p></div>
+      <Link className="primary-button" to={`/training/workout/${encodeURIComponent(activeWorkout.templateCode)}`} aria-label="Продолжить активную тренировку">Продолжить тренировку <ArrowRight /></Link>
+    </section>}
+
+    <nav className="today-daily-entries" aria-label="Зал и питание на сегодня">
+      <Link to="/training" aria-label="Открыть зал"><Dumbbell aria-hidden="true" /><span><strong>Зал</strong><small>Программа, упражнения и история</small></span><ArrowRight aria-hidden="true" /></Link>
+      <Link to="/nutrition" aria-label="Открыть питание за сегодня"><Utensils aria-hidden="true" /><span><strong>Питание сегодня</strong><small>{nutritionUnavailable ? 'Записи недоступны · открыть дневник' : todayNutrition === null ? 'Загружаем записи за сегодня…' : todayNutrition.length === 0 ? 'Пока нет записей · добавить приём пищи' : `Записей: ${todayNutrition.length}${nutritionFacts ? ` · ${nutritionFacts} по заполненным полям` : ' · калории и белок не указаны'}`}</small></span><ArrowRight aria-hidden="true" /></Link>
+    </nav>
 
     <section className="section-block" aria-busy={loading}>
       <div className="section-heading"><div><p className="eyebrow">Главное на день</p><h2>Три главных действия</h2></div><span aria-label={`Выполнено ${completedFocus} из ${FOCUS_LIMIT}`}>{completedFocus}/{FOCUS_LIMIT}</span></div>
@@ -74,6 +118,13 @@ export function HomePage() {
         })}</div> : <p className="empty-inline">По этому запросу действий нет.</p>}
       </section>}
     </section>
+
+    <section className="score-card">
+      <div><p className="eyebrow">Дисциплина недели</p><h2>{score === null ? 'Недостаточно данных' : score >= 80 ? 'Сильный ритм' : score >= 50 ? 'Набираете темп' : 'Начните с одного шага'}</h2><p>{score === null ? 'Выберите одно из трёх главных действий, добавьте привычку или первый шаг.' : '50% — выполненный фокус, 30% — привычки, 20% — недельная цель 5 действий. План растёт по дням; пустые категории не снижают максимум.'}</p></div>
+      {score === null ? <div className="score-placeholder" aria-label="Индекс дисциплины: недостаточно данных"><strong>—</strong><span>нет данных</span></div> : <ProgressRing value={score} label="из 100" />}
+    </section>
+
+    <nav className="today-tool-links" aria-label="Записи и итоги"><Link to="/journal"><NotebookPen aria-hidden="true" />Дневник <ArrowRight aria-hidden="true" /></Link><Link to="/review"><BarChart3 aria-hidden="true" />Итоги недели <ArrowRight aria-hidden="true" /></Link></nav>
 
     <section className="section-block">
       <div className="section-heading"><div><p className="eyebrow">Повторение создаёт результат</p><h2>Привычки сегодня</h2></div><Link to="/progress?tab=habits">Все <ArrowRight /></Link></div>

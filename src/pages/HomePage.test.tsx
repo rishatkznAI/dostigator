@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +6,7 @@ import type { ActionItem, AppData } from '../types'
 import { localDate, startOfWeek } from '../lib/date'
 import { weeklyMetrics } from '../lib/progress'
 import { HomePage } from './HomePage'
+import type { NutritionEntry, WorkoutDraft } from '../types/training'
 
 const empty: AppData = { areas: [], goals: [], actions: [], habits: [], checkins: [], reviews: [] }
 const goal = { id: 'goal-1', user_id: 'user-a', area_id: null, title: 'Первая цель', description: '', why: '', kind: 'goal' as const, status: 'active' as const, progress: 0, target_date: null, completed_at: null, created_at: 'now', updated_at: 'now' }
@@ -17,9 +18,13 @@ const mocks = vi.hoisted(() => ({
   loading: false,
   toggleFocus: vi.fn(),
   toggleHabitToday: vi.fn(),
+  activeDraft: null as WorkoutDraft | null,
+  loadNutritionEntries: vi.fn(),
 }))
 
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: mocks.user }) }))
+vi.mock('../lib/storage', () => ({ getActiveDraft: () => mocks.activeDraft }))
+vi.mock('../lib/trainingRepository', () => ({ loadNutritionEntries: mocks.loadNutritionEntries }))
 vi.mock('../context/DataContext', () => ({ useData: () => ({
   data: mocks.data ?? empty,
   loading: mocks.loading,
@@ -38,9 +43,54 @@ describe('Home Focus 3', () => {
     mocks.loading = false
     mocks.toggleFocus.mockReset().mockResolvedValue(undefined)
     mocks.toggleHabitToday.mockReset().mockResolvedValue(undefined)
+    mocks.activeDraft = null
+    mocks.loadNutritionEntries.mockReset().mockResolvedValue([])
   })
 
   afterEach(cleanup)
+
+  it('offers the owner’s active workout first without changing the recorded facts', async () => {
+    mocks.activeDraft = { userId: 'user-a', templateCode: 'A', title: 'Тренировка A', finishedAt: null, exercises: [{ sets: [{ done: true, isWarmup: false }, { done: true, isWarmup: true }, { done: false, isWarmup: false }] }] } as WorkoutDraft
+    const snapshot = structuredClone(mocks.activeDraft)
+    render(<MemoryRouter><HomePage /></MemoryRouter>)
+    const section = screen.getByRole('region', { name: 'Тренировка A' })
+    expect(within(section).getByText(/Записано рабочих подходов: 1/)).toBeVisible()
+    expect(within(section).getByRole('link', { name: 'Продолжить активную тренировку' })).toHaveAttribute('href', '/training/workout/A')
+    expect(section.compareDocumentPosition(screen.getByRole('heading', { name: 'Три главных действия' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(mocks.activeDraft).toEqual(snapshot)
+    await screen.findByText('Пока нет записей · добавить приём пищи')
+  })
+
+  it('keeps journal and weekly review reachable without adding primary tabs', async () => {
+    render(<MemoryRouter><HomePage /></MemoryRouter>)
+    const tools = screen.getByRole('navigation', { name: 'Записи и итоги' })
+    expect(within(tools).getByRole('link', { name: 'Дневник' })).toHaveAttribute('href', '/journal')
+    expect(within(tools).getByRole('link', { name: 'Итоги недели' })).toHaveAttribute('href', '/review')
+    await screen.findByText('Пока нет записей · добавить приём пищи')
+  })
+
+  it('shows only entered food facts and never turns unknown calories into zero', async () => {
+    mocks.loadNutritionEntries.mockResolvedValueOnce([{ user_id: 'user-a', calories: null, protein_g: 25 }] as NutritionEntry[])
+    render(<MemoryRouter><HomePage /></MemoryRouter>)
+    const food = screen.getByRole('link', { name: 'Открыть питание за сегодня' })
+    await within(food).findByText(/25 г белка по заполненным полям/)
+    expect(food).not.toHaveTextContent('0 ккал')
+    expect(mocks.loadNutritionEntries).toHaveBeenCalledWith(new Date(`${localDate()}T00:00:00`), expect.any(Date))
+  })
+
+  it('discards a late nutrition response after the account changes and hides the old workout', async () => {
+    let finish!: (entries: NutritionEntry[]) => void
+    mocks.loadNutritionEntries.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    mocks.activeDraft = { userId: 'user-a', templateCode: 'A', title: 'Тренировка A', finishedAt: null, exercises: [] } as unknown as WorkoutDraft
+    const view = render(<MemoryRouter><HomePage /></MemoryRouter>)
+    mocks.user = { id: 'user-b', email: 'b@example.com', user_metadata: {} }
+    mocks.loadNutritionEntries.mockResolvedValueOnce([])
+    view.rerender(<MemoryRouter><HomePage /></MemoryRouter>)
+    await act(async () => finish([{ user_id: 'user-a', calories: 9999, protein_g: 900 }] as NutritionEntry[]))
+    expect(screen.queryByRole('link', { name: 'Продолжить активную тренировку' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Открыть питание за сегодня' })).not.toHaveTextContent('9999')
+    await screen.findByText('Пока нет записей · добавить приём пищи')
+  })
 
   it('uses the editable nickname and explains the three-action limit', () => {
     mocks.user = { id: 'user-a', email: 'user@example.com', user_metadata: { display_name: 'Ришат' } }

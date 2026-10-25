@@ -3,7 +3,7 @@ import type { TableRow } from './trainingDatabase'
 export type Exercise = Pick<
   TableRow<'exercise_library'>,
   'key' | 'name' | 'muscles' | 'steps' | 'mistakes' | 'youtube_url'
->
+> & { custom?: boolean }
 
 export type WorkoutTemplateItem = {
   exercise: Exercise
@@ -102,6 +102,7 @@ export type HistoryWorkout = {
     id: string
     exerciseKey: string | null
     exerciseName: string
+    customExercise?: Exercise
     target: string
     sortOrder: number
     skipped: boolean

@@ -17,6 +17,7 @@ import type { TableRow } from '../types/trainingDatabase'
 import { historySummary } from './workout'
 import { selectPreviousResults } from './workout-targets'
 import { storeWorkoutConflict } from './workout-conflicts'
+import { decodePersonalExercise, encodePersonalExercise, FREE_WORKOUT_CODE, FREE_WORKOUT_NOTE } from './free-workout'
 
 type QueryError = { message: string }
 
@@ -74,7 +75,7 @@ export async function loadHistory(limit = 100): Promise<HistoryWorkout[]> {
     id: session.id,
     revision: session.revision,
     updatedAt: session.updated_at,
-    templateCode: session.template_code,
+    templateCode: session.template_code ?? (session.note === FREE_WORKOUT_NOTE ? FREE_WORKOUT_CODE : null),
     title: session.title,
     startedAt: session.started_at,
     finishedAt: session.finished_at!,
@@ -82,16 +83,19 @@ export async function loadHistory(limit = 100): Promise<HistoryWorkout[]> {
     readinessMode: session.readiness_mode as 'normal' | 'reduced' | null,
     exercises: exercises
       .filter((exercise) => exercise.session_id === session.id)
-      .map((exercise) => ({
+      .map((exercise) => {
+        const customExercise = exercise.exercise_key === null ? decodePersonalExercise(exercise.note, exercise.exercise_name) : undefined
+        return {
         id: exercise.id,
-        exerciseKey: exercise.exercise_key,
+        exerciseKey: exercise.exercise_key ?? customExercise?.key ?? null,
+        ...(customExercise ? { customExercise } : {}),
         exerciseName: exercise.exercise_name,
         target: exercise.target,
         sortOrder: exercise.sort_order,
         skipped: exercise.skipped,
         skipReason: exercise.skip_reason,
         sets: sets.filter((set) => set.session_exercise_id === exercise.id).map(mapSet),
-      })),
+      }}),
   }))
 }
 
@@ -110,15 +114,16 @@ export async function syncWorkoutDraft(draft: WorkoutDraft): Promise<void> {
   if (state.updatedAt && Date.parse(draft.updatedAt)<=Date.parse(state.updatedAt)) return
   if (state.finishedAt) throw new Error('Тренировка уже завершена на сервере. Локальный ввод сохранён.')
   const session = {
-    id:draft.id,user_id:draft.userId,template_code:draft.templateCode,title:draft.title,started_at:draft.startedAt,finished_at:draft.finishedAt,legacy_updated_at:state.legacyUpdatedAt??null,
+    id:draft.id,user_id:draft.userId,template_code:draft.templateCode === FREE_WORKOUT_CODE ? null : draft.templateCode,title:draft.title,started_at:draft.startedAt,finished_at:draft.finishedAt,legacy_updated_at:state.legacyUpdatedAt??null,
     timer_paused_at:draft.timerPausedAt,timer_paused_duration_ms:draft.timerPausedDurationMs,
     readiness_sleep:draft.readiness?.sleep??null,readiness_energy:draft.readiness?.energy??null,readiness_stress:draft.readiness?.stress??null,
-    readiness_discomfort:draft.readiness?.discomfort??false,readiness_mode:draft.readiness?.mode??null,readiness_note:draft.readiness?.note??'',note:'',
+    readiness_discomfort:draft.readiness?.discomfort??false,readiness_mode:draft.readiness?.mode??null,readiness_note:draft.readiness?.note??'',note:draft.templateCode === FREE_WORKOUT_CODE ? FREE_WORKOUT_NOTE : '',
   }
   const exerciseRows = draft.exercises.map((exercise) => ({
     id: exercise.id,
     session_id: draft.id,
-    exercise_key: exercise.exercise.key,
+    exercise_key: exercise.exercise.custom ? null : exercise.exercise.key,
+    note: encodePersonalExercise(exercise.exercise),
     exercise_name: exercise.exercise.name,
     target: exercise.target,
     sort_order: exercise.sortOrder,
