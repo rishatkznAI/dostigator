@@ -21,6 +21,12 @@ const scheduleByCode: Record<string, string> = {
   C: 'Суббота · по желанию',
 }
 
+const workoutPlural = new Intl.PluralRules('ru-RU')
+const workoutWord = (count: number) => {
+  const category = workoutPlural.select(count)
+  return category === 'one' ? 'тренировка' : category === 'few' ? 'тренировки' : 'тренировок'
+}
+
 export function TrainingPage() {
   const { user, signOut } = useAuth()
   const userId=user?.id
@@ -50,6 +56,7 @@ export function TrainingPage() {
   const stats = useMemo(() => getWeeklyStats(history), [history])
   const nextMandatory = useMemo(() => getNextMandatoryWorkout(history), [history])
   const completedThisWeek = useMemo(() => getCompletedTemplateCodesThisWeek(history), [history])
+  const completedMandatoryCount = ['A', 'B'].filter(code => completedThisWeek.has(code)).length
   const latest = measurements[0]
   const previous = measurements[1]
   const metadataName = user?.user_metadata?.display_name
@@ -58,7 +65,7 @@ export function TrainingPage() {
     : user?.email?.split('@')[0] ?? 'спортсмен'
 
   return (
-    <div className="page home-page">
+    <div className="page home-page training-dashboard">
       <header className="topbar">
         <div>
           <p className="eyebrow">Достигатор · Тренировки</p>
@@ -73,7 +80,7 @@ export function TrainingPage() {
       <nav className="training-shortcuts" aria-label="Разделы TrainLog">
         <Link to="/training/history"><History /><span>История</span></Link>
         <Link to="/nutrition"><Utensils /><span>Питание</span></Link>
-        <Link to="/training/progress" aria-label="Прогресс тренировок"><Activity /><span>Прогресс в зале</span></Link>
+        <Link to="/training/progress" aria-label="Прогресс тренировок"><Activity /><span>Прогресс</span></Link>
         <Link to="/training/body"><Ruler /><span>Замеры</span></Link>
       </nav>
 
@@ -81,9 +88,15 @@ export function TrainingPage() {
         <div className="week-card-heading">
           <div>
             <span>Текущая неделя · цель A и B</span>
-            <strong>{stats.workouts} {stats.workouts === 1 ? 'тренировка' : 'тренировки'}</strong>
+            <strong>{stats.workouts} {workoutWord(stats.workouts)}</strong>
           </div>
-          <div className="week-ring"><span>{['A','B'].filter(code=>completedThisWeek.has(code)).length}</span>/2</div>
+          <div className="week-ring" role="progressbar" aria-label="Обязательные тренировки за неделю" aria-valuemin={0} aria-valuemax={2} aria-valuenow={completedMandatoryCount} aria-valuetext={`${completedMandatoryCount} из 2 обязательных тренировок: A и B`}>
+            <svg viewBox="0 0 60 60" aria-hidden="true" focusable="false">
+              <circle className="week-ring-track" cx="30" cy="30" r="25" />
+              <circle className="week-ring-fill" cx="30" cy="30" r="25" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - completedMandatoryCount * 50} />
+            </svg>
+            <span aria-hidden="true">{completedMandatoryCount}<small>/2</small></span>
+          </div>
         </div>
         <div className="stats-grid">
           <div><strong>{stats.sets}</strong><span>рабочих подходов</span></div>
@@ -116,8 +129,8 @@ export function TrainingPage() {
       )}
 
       <section className="section-block">
-        <div className="section-heading">
-          <div><p className="eyebrow">Твоя программа</p><h2>Начать тренировку</h2>{templates.some(t=>t.programRevision) && <p>V2.1 активна · 2 обязательные тренировки в неделю: A и B. C — по желанию.</p>}</div>
+        <div className="section-heading training-program-heading">
+          <div><p className="eyebrow">Твоя программа</p><h2>Начать тренировку</h2>{templates.some(t=>t.programRevision) && <p className="training-program-description">V2.1 активна · 2 обязательные тренировки в неделю: A и B. C — по желанию.</p>}</div>
           {!navigator.onLine && <span className="offline-pill"><CloudOff size={14} /> офлайн</span>}
         </div>
 

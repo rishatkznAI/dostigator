@@ -64,8 +64,15 @@ try {
   let secondNavigations = 0
   second.on('framenavigated', frame => { if (frame === second.mainFrame()) secondNavigations++ })
   workerEdition++
-  await update(page)
+  // Simulate returning to a long-lived phone app after the next deployment.
+  // The app must discover it itself; no manual registration.update() here.
+  await page.clock.install()
+  await page.clock.fastForward(60_001)
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await page.clock.resume()
   await page.getByRole('button', { name: 'Обновить приложение', exact: true }).waitFor()
+  check('returning to the app discovers a deployed worker without a manual update request')
+  await update(second)
   await second.getByText('Доступно обновление', { exact: true }).waitFor()
   await page.waitForTimeout(800)
   assert.equal(navigations, 0); assert.equal(await page.getByRole('textbox', { name: 'Email', exact: true }).inputValue(), 'unsent-new@example.test')

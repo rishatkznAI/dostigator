@@ -9,11 +9,32 @@ export function createPwaUpdateController(register = registerSW, reload = () => 
   let reloadReady = false
   let explicitlyRequested = false
   let timeout: ReturnType<typeof setTimeout> | undefined
+  let registration: ServiceWorkerRegistration | undefined
+  let lastCheckedAt = 0
+  let checking = false
+  let disposed = false
   const listeners = new Set<() => void>()
   const publish = (next: UpdateState) => { state = next; listeners.forEach(listener => listener()) }
   const stopWaiting = () => { clearTimeout(timeout); timeout = undefined; explicitlyRequested = false }
+  // Installed phone apps can remain open for days. Check when the user returns,
+  // but only announce the waiting worker: activation still needs confirmation.
+  const checkWhenVisible = async () => {
+    if (disposed || !registration || checking || document.visibilityState !== 'visible' || !navigator.onLine || Date.now() - lastCheckedAt < 60_000) return
+    lastCheckedAt = Date.now()
+    checking = true
+    try { await registration.update() }
+    catch { /* Keep the offline app and its inputs available; retry on a later return. */ }
+    finally { checking = false }
+  }
+  document.addEventListener('visibilitychange', checkWhenVisible)
+  window.addEventListener('focus', checkWhenVisible)
+  window.addEventListener('online', checkWhenVisible)
   const update = register({
     immediate: true,
+    onRegisteredSW: (_url, nextRegistration) => {
+      registration = nextRegistration
+      lastCheckedAt = Date.now()
+    },
     onNeedRefresh: () => publish({ ...state, available: true }),
     // A different tab can activate the worker too. Never let that reload this tab.
     onNeedReload: () => {
@@ -45,7 +66,14 @@ export function createPwaUpdateController(register = registerSW, reload = () => 
         publish({ available: true, applying: false, message: 'Не удалось обновить приложение. Проверь подключение и повтори.' })
       }
     },
-    dispose() { stopWaiting(); listeners.clear() },
+    dispose() {
+      disposed = true
+      stopWaiting()
+      document.removeEventListener('visibilitychange', checkWhenVisible)
+      window.removeEventListener('focus', checkWhenVisible)
+      window.removeEventListener('online', checkWhenVisible)
+      listeners.clear()
+    },
   }
 }
 

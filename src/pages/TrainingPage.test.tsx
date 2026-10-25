@@ -74,3 +74,26 @@ it('does not suggest an additional mandatory session once both A and B are compl
  const {container}=render(<MemoryRouter><TrainingPage/></MemoryRouter>);await screen.findAllByText('Готово')
  expect(container.querySelector('.week-ring')).toHaveTextContent('2/2');expect(screen.queryByText('Следующая')).not.toBeInTheDocument();cleanup()
 })
+
+describe('weekly mandatory progress indicator', () => {
+  afterEach(cleanup)
+
+  it.each([
+    { codes: ['C', 'C'], completed: 0, offset: 100 },
+    { codes: ['A', 'A', 'C'], completed: 1, offset: 50 },
+    { codes: ['A', 'B', 'C', 'A'], completed: 2, offset: 0 },
+  ])('renders $completed/2 from distinct A/B facts, with matching accessible and visual progress', async ({ codes, completed, offset }) => {
+    const { loadHistory } = await import('../lib/trainingRepository')
+    const now = new Date().toISOString()
+    vi.mocked(loadHistory).mockResolvedValueOnce(codes.map((templateCode, index) => ({ id: `progress-${index}`, templateCode, title: 'Test', startedAt: now, finishedAt: now, timerPausedDurationMs: 0, readinessMode: null, exercises: [] })))
+    render(<MemoryRouter><TrainingPage /></MemoryRouter>)
+    await screen.findAllByText('Готово')
+    const indicator = screen.getByRole('progressbar', { name: 'Обязательные тренировки за неделю' })
+    expect(indicator).toHaveAttribute('aria-valuemin', '0')
+    expect(indicator).toHaveAttribute('aria-valuemax', '2')
+    expect(indicator).toHaveAttribute('aria-valuenow', String(completed))
+    expect(indicator).toHaveTextContent(`${completed}/2`)
+    expect(indicator.querySelector('.week-ring-fill')).toHaveAttribute('pathLength', '100')
+    expect(indicator.querySelector('.week-ring-fill')).toHaveAttribute('stroke-dashoffset', String(offset))
+  })
+})
