@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { ArrowRight, KeyRound, Mail } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase'
+import { buildInfo } from '../lib/build-info'
 
 type Mode = 'password' | 'signup' | 'magic' | 'recovery'
 type Message = { kind: 'success' | 'error'; text: string }
@@ -65,6 +66,7 @@ export function LoginPage() {
         {mode !== 'password' && <button type="button" disabled={busy} onClick={() => changeMode('password')}>Войти с паролем</button>}
         {mode === 'password' && <><button type="button" disabled={busy} onClick={() => changeMode('signup')}>Создать аккаунт</button><button type="button" disabled={busy} onClick={() => changeMode('magic')}>Войти по ссылке</button><button type="button" disabled={busy} onClick={() => changeMode('recovery')}>Забыли пароль?</button></>}
       </div>
+      <p className="version auth-version">Достигатор · версия {buildInfo.version}<br />Сборка {buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}</p>
     </section>
   </main>
 }

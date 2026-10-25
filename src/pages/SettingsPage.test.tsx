@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   updateDisplayName: vi.fn(),
   updatePassword: vi.fn(),
   signOut: vi.fn(),
+  getPendingWrites: vi.fn(),
 }))
 
 vi.mock('../context/AuthContext', () => ({
@@ -44,6 +45,7 @@ vi.mock('../context/DataContext', () => ({
   }),
 }))
 vi.mock('../context/OnboardingContext', () => ({ useOnboarding: () => ({ restart: vi.fn() }) }))
+vi.mock('../lib/update-safety', () => ({ getPendingWrites: mocks.getPendingWrites }))
 vi.mock('../lib/offline', () => ({
   clearQuarantine: mocks.clearQuarantine,
   readQuarantine: mocks.readQuarantine,
@@ -100,6 +102,7 @@ describe('backup and sync controls', () => {
     mocks.updateDisplayName.mockReset().mockResolvedValue(undefined)
     mocks.updatePassword.mockReset().mockResolvedValue(undefined)
     mocks.signOut.mockReset().mockResolvedValue(undefined)
+    mocks.getPendingWrites.mockReset().mockReturnValue(0)
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:quarantine')
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
@@ -115,6 +118,41 @@ describe('backup and sync controls', () => {
     const version = screen.getByText(`Достигатор · версия ${buildInfo.version}`, { exact: false })
     expect(version).toHaveTextContent(`Сборка ${buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}`)
     if (buildInfo.builtAt) expect(version.querySelector('time')).toHaveAttribute('dateTime', buildInfo.builtAt)
+  })
+
+  it('uses native navigation to the fresh entry only after confirmation', () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderPage()
+    const link = screen.getByRole('link', { name: 'Открыть свежую версию' })
+    const destination = new URL(link.getAttribute('href')!, 'https://fixture.example')
+    expect(destination.pathname).toBe(`${import.meta.env.BASE_URL}auth/v1/open.html`)
+    expect(destination.searchParams.get('release')).toBe(buildInfo.commit)
+    // Observe React's decision, then prevent jsdom from trying to leave the test document.
+    let preventedByProduct = true
+    document.addEventListener('click', event => { preventedByProduct = event.defaultPrevented; event.preventDefault() }, { once: true })
+    fireEvent.click(link)
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('несохранённый ввод может пропасть'))
+    expect(preventedByProduct).toBe(false)
+    expect(new URL(link.getAttribute('href')!, 'https://fixture.example').searchParams.get('check')).toMatch(/^\d+$/)
+  })
+
+  it('cancels fresh navigation and retains entered form values when the user declines', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderPage()
+    const nickname = screen.getByRole('textbox', { name: 'Ник' })
+    fireEvent.change(nickname, { target: { value: 'Несохранённый ник' } })
+    expect(fireEvent.click(screen.getByRole('link', { name: 'Открыть свежую версию' }))).toBe(false)
+    expect(nickname).toHaveValue('Несохранённый ник')
+    expect(mocks.updateDisplayName).not.toHaveBeenCalled()
+  })
+
+  it('blocks fresh navigation while a background write is in flight', () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mocks.getPendingWrites.mockReturnValue(1)
+    renderPage()
+    expect(fireEvent.click(screen.getByRole('link', { name: 'Открыть свежую версию' }))).toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent('Дождись завершения сохранения')
   })
 
   it('changes the nickname used by the application greeting', async () => {

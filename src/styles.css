@@ -378,6 +378,9 @@ input:focus, textarea:focus, select:focus { border-color: #8c7537; box-shadow: 0
 .logout-button span { display: grid; gap: 3px; }
 .logout-button small { color: #aa777d; }
 .version { color: var(--text-secondary); text-align: center; font-size: .75rem; margin: 5px 0 0; }
+.auth-card .auth-version { margin-top: 20px; line-height: 1.5; }
+.settings-build-info { display: grid; justify-items: center; gap: 10px; }
+.settings-build-info .fresh-version-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--accent); text-align: center; font-size: .875rem; line-height: 1.4; }
 .settings-link { cursor: pointer; }
 .settings-link > span:last-child { color: var(--muted); font-size: 1.15rem; }
 

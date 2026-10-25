@@ -1,7 +1,7 @@
 {
   "name": "dostigator",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "packageManager": "pnpm@11.19.0",
   "engines": {
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/clean-dist.mjs && tsc -b && vite build && node scripts/prepare-sites-build.mjs",
+    "build": "node scripts/clean-dist.mjs && tsc -b && vite build && node scripts/prepare-sites-build.mjs && node scripts/prepare-pages-build.mjs",
     "lint": "oxlint",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
