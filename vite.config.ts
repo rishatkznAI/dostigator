@@ -50,6 +50,8 @@ export default defineConfig(({ command, mode }) => {
           ],
         },
         workbox: {
+          // The recovery entry must always reach the server, even after future releases.
+          globIgnores: ['**/auth/v1/**', '**/node_modules/**'],
           navigateFallbackDenylist: [/\/auth\/v1\//, /\/rest\/v1\//],
           runtimeCaching: [],
         },

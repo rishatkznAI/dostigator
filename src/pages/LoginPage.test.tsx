@@ -2,6 +2,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LoginPage } from './LoginPage'
+import { buildInfo } from '../lib/build-info'
 
 const mocks = vi.hoisted(() => ({
   signIn: vi.fn(),
@@ -20,6 +21,11 @@ describe('LoginPage open registration', () => {
   })
 
   afterEach(cleanup)
+
+  it('shows the actual bundled version before the user signs in', () => {
+    render(<LoginPage />)
+    expect(screen.getByText(`Достигатор · версия ${buildInfo.version}`, { exact: false })).toHaveTextContent(`Сборка ${buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}`)
+  })
 
   it('keeps the existing password-login path available', async () => {
     render(<LoginPage />)

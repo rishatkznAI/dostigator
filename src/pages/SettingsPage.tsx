@@ -8,6 +8,7 @@ import { useOnboarding } from '../context/OnboardingContext'
 import { assertActiveOwner, importBackup, isBackup, loadAllHistory, makeBackup, previewBackup } from '../lib/repository'
 import { clearQuarantine, queueStats, readQuarantine } from '../lib/offline'
 import { buildInfo } from '../lib/build-info'
+import { getPendingWrites } from '../lib/update-safety'
 import type { BackupPreview } from '../lib/repository'
 import type { PersonalBackup } from '../types'
 
@@ -250,6 +251,20 @@ export function SettingsPage() {
     <section className={`settings-card ${quarantinedSync > 0 || failedSync > 0 ? '' : 'compact-card'}`} aria-busy={syncBusy}><div><RefreshCw /><span><strong>Синхронизация</strong><small>{syncSummary}</small></span></div><div className="button-row">{(failedSync > 0 || pending > 0) && <button className="secondary-button" disabled={busy || syncing} aria-busy={operation === 'sync-retry'} onClick={() => void retrySynchronization()}>Повторить</button>}{failedSync > 0 && <button className="secondary-button" disabled={busy || syncing} aria-busy={operation === 'sync-resolve'} onClick={() => void resolveSyncConflict()}>Отменить локальные изменения</button>}{failedSync === 0 && pending === 0 && <button className="secondary-button" disabled={busy || syncing} aria-busy={operation === 'sync-refresh'} onClick={() => void refreshData()}>Обновить</button>}{quarantinedSync > 0 && <><button className="secondary-button" disabled={busy} aria-busy={operation === 'quarantine-download'} onClick={() => void downloadSyncQuarantine()}><Download />Скачать карантин</button><button className="secondary-button" disabled={busy} aria-busy={operation === 'quarantine-delete'} onClick={() => void discardSyncQuarantine()}>Удалить карантин</button></>}</div></section>
     {legacySyncQuarantine && <section className="settings-card"><div className="settings-title"><ShieldCheck /><div><p className="eyebrow">Защищённый карантин</p><h2>Старая очередь без владельца</h2></div></div><p>Эти данные сохранены локально, но приложение не может доказать, какому аккаунту они принадлежат. Поэтому их содержимое нельзя просмотреть, скачать, удалить или отправить из аккаунта.</p></section>}
     <button className="logout-button" disabled={busy} aria-busy={operation === 'signout'} onClick={() => void logOut()}><LogOut /><span><strong>{operation === 'signout' ? 'Выходим…' : 'Выйти'}</strong><small>Данные в Supabase сохранятся</small></span></button>
-    <p className="version">Достигатор · версия {buildInfo.version}<br />Сборка {buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}{buildInfo.builtAt && <> · <time dateTime={buildInfo.builtAt}>{new Date(buildInfo.builtAt).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })} МСК</time></>}</p>
+    <section className="settings-build-info" aria-label="Версия приложения">
+      <p className="version">Достигатор · версия {buildInfo.version}<br />Сборка {buildInfo.commit === 'local' ? 'локальная' : buildInfo.commit.slice(0, 7)}{buildInfo.builtAt && <> · <time dateTime={buildInfo.builtAt}>{new Date(buildInfo.builtAt).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })} МСК</time></>}</p>
+      <a className="fresh-version-link" href={`${import.meta.env.BASE_URL}auth/v1/open.html?release=${buildInfo.commit}`} onClick={(event) => {
+        if (busy || operationRef.current || syncing || getPendingWrites() > 0) {
+          event.preventDefault()
+          setMessage({ kind: 'error', text: 'Дождись завершения сохранения и повтори переход к свежей версии.' })
+          return
+        }
+        if (!window.confirm('Сначала сохрани открытые формы. Переход закроет текущую страницу, несохранённый ввод может пропасть. Открыть свежую версию?')) {
+          event.preventDefault()
+          return
+        }
+        event.currentTarget.href = `${import.meta.env.BASE_URL}auth/v1/open.html?check=${Date.now()}`
+      }}>Открыть свежую версию</a>
+    </section>
   </div>
 }

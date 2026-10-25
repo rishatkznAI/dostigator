@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import test from 'node:test'
+import { prepareFreshEntry } from '../scripts/prepare-pages-build.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const loadConfig = `
@@ -42,7 +46,7 @@ test('the bundled identity and public artifact match without configuration secre
   }))
   assert.equal(base, '/dostigator/')
   assert.equal(info.commit, commit)
-  assert.equal(info.version, '0.1.0')
+  assert.equal(info.version, '0.1.1')
   assert.equal(new Date(info.builtAt).toISOString(), info.builtAt)
   assert.deepEqual(Object.keys(info).sort(), ['builtAt', 'commit', 'version'])
   assert.equal(emitted.length, 1)
@@ -55,4 +59,19 @@ test('standalone local builds have an explicit local identity and root base', ()
   const { base, info } = read(run({ GITHUB_PAGES: 'false' }))
   assert.equal(base, '/')
   assert.equal(info.commit, 'local')
+})
+
+test('network entry uses the finished hashed app shell without altering it', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'dostigator-fresh-entry-'))
+  try {
+    const html = '<html><head><script type="module" src="/dostigator/assets/index-release.js"></script></head><body><div id="root"></div></body></html>'
+    await writeFile(join(directory, 'index.html'), html)
+    await prepareFreshEntry(directory)
+    assert.equal(await readFile(join(directory, 'auth/v1/open.html'), 'utf8'), html)
+    assert.equal(await readFile(join(directory, 'index.html'), 'utf8'), html)
+    await mkdir(join(directory, 'unrelated'), { recursive: true })
+    await writeFile(join(directory, 'unrelated/sentinel'), 'preserved')
+    await prepareFreshEntry(directory)
+    assert.equal(await readFile(join(directory, 'unrelated/sentinel'), 'utf8'), 'preserved')
+  } finally { await rm(directory, { recursive: true, force: true }) }
 })
