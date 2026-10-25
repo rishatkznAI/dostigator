@@ -1,11 +1,16 @@
 import { visibleDialogControl } from '../lib/dialog-focus'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { useEffect, useRef, type PropsWithChildren } from 'react'
+import { useEffect, useId, useRef, useState, type PropsWithChildren } from 'react'
 
-type Props = PropsWithChildren<{ title: string; onClose: () => void }>
+type Props = PropsWithChildren<{ title: string; busy?: boolean; onClose: () => void }>
 
-export function BottomSheet({ title, onClose, children }: Props) {
+export function BottomSheet({ title, busy = false, onClose, children }: Props) {
+  const titleId = useId()
+  const [closing, setClosing] = useState(false)
+  const closingRef = useRef(false)
+  const busyRef = useRef(busy)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const portalRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -13,7 +18,20 @@ export function BottomSheet({ title, onClose, children }: Props) {
 
   useEffect(() => {
     onCloseRef.current = onClose
-  }, [onClose])
+    busyRef.current = busy
+  }, [onClose, busy])
+
+  const requestClose = () => {
+    if (busyRef.current || closingRef.current) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { onCloseRef.current(); return }
+    closingRef.current = true
+    setClosing(true)
+    closeTimer.current = setTimeout(() => {
+      closingRef.current = false
+      setClosing(false)
+      if (!busyRef.current) onCloseRef.current()
+    }, 160)
+  }
 
   useEffect(() => {
     const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -24,7 +42,7 @@ export function BottomSheet({ title, onClose, children }: Props) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onCloseRef.current()
+        requestClose()
         return
       }
       if (event.key !== 'Tab' || !dialogRef.current) return
@@ -47,24 +65,30 @@ export function BottomSheet({ title, onClose, children }: Props) {
       }
     }
 
-    closeButtonRef.current?.focus({ preventScroll: true })
+    if (busyRef.current) dialogRef.current?.focus({ preventScroll: true })
+    else closeButtonRef.current?.focus({ preventScroll: true })
     window.addEventListener('keydown', handleKeyDown)
     document.body.classList.add('modal-open')
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
+      clearTimeout(closeTimer.current)
       document.body.classList.remove('modal-open')
       priorInert.forEach(({element,inert,attribute})=>{element.inert=inert;if(!attribute)element.removeAttribute('inert')})
       if (previousActiveElement?.isConnected) previousActiveElement.focus({ preventScroll: true })
     }
   }, [])
 
+  useEffect(() => {
+    if (busy) dialogRef.current?.focus({ preventScroll: true })
+  }, [busy])
+
   return createPortal(
-    <div className="training-module" ref={portalRef}><div className="sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section ref={dialogRef} className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabIndex={-1}>
-        <div className="sheet-handle" />
+    <div className="training-module" ref={portalRef}><div className="sheet-backdrop" role="presentation" data-closing={closing} onMouseDown={(event) => event.target === event.currentTarget && requestClose()}>
+      <section ref={dialogRef} className="bottom-sheet" role="dialog" aria-modal="true" aria-busy={busy} aria-labelledby={titleId} tabIndex={-1}>
+        <div className="sheet-handle" aria-hidden="true" />
         <header>
-          <h2 id="sheet-title">{title}</h2>
-          <button ref={closeButtonRef} className="icon-button" type="button" onClick={onClose} aria-label="Закрыть">
+          <h2 id={titleId}>{title}</h2>
+          <button ref={closeButtonRef} className="icon-button" type="button" disabled={busy || closing} onClick={requestClose} aria-label="Закрыть">
             <X />
           </button>
         </header>

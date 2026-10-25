@@ -12,6 +12,8 @@ import { productCases } from './product.cases.mjs'
 import { correctionCases } from './corrections.cases.mjs'
 import { v21Cases } from './v21.cases.mjs'
 import { freeWorkoutCases } from './free-workout.cases.mjs'
+import { workoutSetNumberingUpgradeCases } from './workout-set-numbering.cases.mjs'
+import { cardioPhotoCases } from './cardio-photos.cases.mjs'
 
 const ownerA = '10000000-0000-4000-8000-000000000001'
 const ownerB = '20000000-0000-4000-8000-000000000002'
@@ -136,6 +138,10 @@ try {
   const migrationDir = join(process.cwd(), 'supabase', 'migrations')
   const files = (await readdir(migrationDir)).filter((file) => file.endsWith('.sql')).sort()
   for (const file of files) {
+    if (file.endsWith('_fix_atomic_workout_set_numbering.sql')) {
+      await workoutSetNumberingUpgradeCases(admin, asUser, ownerA, ownerB, await readFile(join(migrationDir, file), 'utf8'))
+      continue
+    }
     if (!file.endsWith('_add_v21_exercise_references.sql')) { await admin.query(await readFile(join(migrationDir,file),'utf8')); continue }
     await admin.query(`insert into workout_sessions(id,user_id,template_code,title,started_at,finished_at) values
       ('f1000000-0000-4000-8000-000000000001','${ownerA}','A','Legacy completed','2026-10-01','2026-10-01T01:00:00Z'),
@@ -167,6 +173,7 @@ try {
   await trainingUxCases(admin, asUser, ownerA, ownerB)
   const productPeer=postgres.getPgClient();clients.push(productPeer);await productPeer.connect()
   await productCases(admin, asUser, ownerA, ownerB, productPeer)
+  await cardioPhotoCases(admin, asUser, ownerA, ownerB)
   await v21Cases(admin, asUser, ownerA)
   await freeWorkoutCases(admin, asUser, ownerA, ownerB)
   await correctionCases(admin, asUser, ownerA, ownerB)

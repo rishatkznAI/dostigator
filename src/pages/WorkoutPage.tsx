@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Cloud, CloudOff, HeartPulse, Trash2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, Cloud, CloudOff, HeartPulse, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { WorkoutResult } from '../components/WorkoutResult'
@@ -8,6 +8,7 @@ import { workoutCardio } from '../lib/cardio-receipts'
 import { WorkoutSyncConflicts } from '../components/WorkoutSyncConflicts'
 import { getSyncQueue } from '../lib/storage'
 import { BottomSheet } from '../components/BottomSheet'
+import { TrainingDisclosure } from '../components/TrainingDisclosure'
 import { ExerciseCard } from '../components/ExerciseCard'
 import { LoadingScreen } from '../components/LoadingScreen'
 import { RestTimer } from '../components/RestTimer'
@@ -195,10 +196,10 @@ export function WorkoutPage() {
     <Link className="back-link" to="/training"><ArrowLeft />К тренировкам</Link>
     <p className="eyebrow">Тренировка {template.code} · подготовка</p><h1>{template.title}</h1>
     <p className="preparation-copy">{optionalDay ? '30–45 минут кардио · до 6 дополнительных подходов по желанию' : `${template.items.length} упражнений · ${template.items.reduce((n,item)=>n+item.setCount,0)} рабочих подходов · около 75 минут вместе с кардио`}</p>
-    {template.programRevision && <section className="preparation-step"><strong>Программа V2.1 активна</strong><p>{optionalDay ? 'Основная часть — 30–45 минут умеренного кардио. C необязательна и не снижает дисциплину.' : 'После силовой — 20 минут умеренного кардио. Ориентир на всё занятие — около 75 минут.'}</p><details><summary>Правила выполнения</summary><p>{programV21Rules}</p></details></section>}
+    {template.programRevision && <section className="preparation-step"><strong>Программа V2.1 активна</strong><p>{optionalDay ? 'Основная часть — 30–45 минут умеренного кардио. C необязательна и не снижает дисциплину.' : 'После силовой — 20 минут умеренного кардио. Ориентир на всё занятие — около 75 минут.'}</p><TrainingDisclosure className="training-extras preparation-rules" title="Правила выполнения"><p>{programV21Rules}</p></TrainingDisclosure></section>}
     {optionalDay ? <section className="preparation-step"><strong>Дополнительно при хорошем восстановлении</strong><p>Все упражнения по желанию; по 2 подхода. Отметь только то, что хочешь выполнить.</p>{template.items.map(item=><label className="check-row" key={item.exercise.key}><input type="checkbox" checked={optionalKeys.includes(item.exercise.key)} onChange={e=>setOptionalKeys(keys=>e.target.checked?[...keys,item.exercise.key]:keys.filter(k=>k!==item.exercise.key))}/>{item.exercise.name} · 2 × {item.repTarget}</label>)}<Link className="primary-button wide" to="/training/cardio?program=C">Перейти к кардио · 30–45 минут</Link></section> : <section className="preparation-step"><strong>Готов начать?</strong><p>Подготовь первое упражнение: {template.items[0]?.exercise.name}. Таймер начнётся после нажатия.</p></section>}
-    <details className="training-extras"><summary>Упражнения и подходы</summary>{template.items.map(item=><p key={item.exercise.key}>{item.exercise.name} · {item.setCount} × {item.repTarget}</p>)}</details>
-    <details className="training-extras"><summary>Проверить готовность · необязательно</summary><ReadinessCheck onComplete={(readiness)=>setPreparationReadiness(readiness)} submitLabel="Учесть самочувствие" />{preparationReadiness && <p role="status">Самочувствие учтено. {preparationReadiness.mode === 'reduced' ? 'Рекомендации без прибавки нагрузки.' : 'Обычный режим.'}</p>}</details>
+    <TrainingDisclosure className="training-extras preparation-exercises" title="Упражнения и подходы" description="Посмотреть полный план тренировки">{template.items.map(item=><p key={item.exercise.key}>{item.exercise.name} · {item.setCount} × {item.repTarget}</p>)}</TrainingDisclosure>
+    <TrainingDisclosure className="training-extras preparation-readiness" title="Проверить готовность · необязательно" description="Сон, энергия и самочувствие перед стартом"><ReadinessCheck onComplete={(readiness)=>setPreparationReadiness(readiness)} submitLabel="Учесть самочувствие" />{preparationReadiness && <p role="status">Самочувствие учтено. {preparationReadiness.mode === 'reduced' ? 'Рекомендации без прибавки нагрузки.' : 'Обычный режим.'}</p>}</TrainingDisclosure>
     {message && <p role="alert">{message}</p>}
     <button type="button" disabled={Boolean(optionalDay && !optionalKeys.length)} className="primary-button wide" onClick={()=>{
       if (!user) return
@@ -419,7 +420,7 @@ export function WorkoutPage() {
       {confirmation && <div className="training-confirmation" role="status"><CheckCircle2 size={18} /><span>{confirmation.text}</span><small>{confirmation.exerciseName}</small>{!autoRest && confirmation.needsRest && <button type="button" aria-label={`Начать отдых · ${formatRestDuration(confirmation.seconds)}`} onClick={() => { primeRestAlert(); setDraft((current) => current && ({ ...current, activeRest: { until: Date.now() + confirmation.seconds * 1000, exerciseName: confirmation.exerciseName, plannedSeconds: confirmation.seconds } })) }}>Отдых</button>}</div>}
 
       {historyStatus === 'error' && <button className="history-retry" type="button" onClick={()=>setHistoryRetry(value=>value+1)}>Прошлые результаты недоступны · повторить</button>}
-      <div className="workout-focus-nav"><button type="button" className="training-secondary" onClick={event=>{event.currentTarget.focus({preventScroll:true});setExercisePickerOpen(true)}}>Упражнение {activeExerciseNumber} из {draft.exercises.length} <span>Список</span></button></div>
+      <div className="workout-focus-nav"><button type="button" className="training-secondary" aria-haspopup="dialog" aria-expanded={exercisePickerOpen} onClick={event=>{event.currentTarget.focus({preventScroll:true});setExercisePickerOpen(true)}}>Упражнение {activeExerciseNumber} из {draft.exercises.length} <span className="exercise-list-action">Открыть список <ChevronDown aria-hidden="true" /></span></button></div>
       {!nextExercise && finishSummary.sets > 0 && <section className="strength-complete" role="status"><CheckCircle2 /><h2>Силовая часть готова</h2><p>{finishSummary.sets} рабочих подходов записано.</p>{linkedCardio.length ? <><p>Кардио записано · {cardioClock(linkedCardio.reduce((sum,item)=>sum+item.receipt.durationSeconds,0)*1000)}</p><button type="button" className="primary-button wide" onClick={()=>setFinishOpen(true)}>Завершить тренировку</button></> : <><Link className="primary-button wide" to="/training/cardio">Перейти к кардио</Link><button type="button" className="text-button" onClick={()=>setFinishOpen(true)}>Завершить без кардио</button></>}</section>}
       {draft.activeRest !== null && (
         <RestTimer
@@ -458,7 +459,7 @@ export function WorkoutPage() {
       </div>
       </div>
       {exercisePickerOpen && <BottomSheet title="Упражнения тренировки" onClose={()=>setExercisePickerOpen(false)}><div className="choice-list workout-exercise-picker">{draft.exercises.map((exercise,index)=><button key={exercise.id} type="button" aria-current={exercise.id===activeExerciseId?'step':undefined} onClick={()=>{selectExercise(exercise.id);setExercisePickerOpen(false)}}><span><strong>{index+1}. {exercise.exercise.name}</strong><small>{exercise.skipped?'Пропущено':`${exercise.sets.filter(set=>set.done&&!set.isWarmup).length} из ${exercise.sets.filter(set=>!set.isWarmup).length} записано`}</small></span></button>)}</div></BottomSheet>}
-      <details className="training-extras workout-options"><summary><span><strong>Автоотдых и самочувствие</strong><small>{autoRest ? 'Автоотдых включён' : 'Автоотдых выключен'} · оценка готовности</small></span></summary><label className="training-toggle"><input type="checkbox" checked={autoRest} onChange={(event) => { setAutoRest(event.target.checked); localStorage.setItem(`trainlog:auto-rest:${draft.userId}`, String(event.target.checked)) }} />Автоматически запускать отдых после подхода</label><details className="training-extras workout-readiness"><summary>Изменить оценку самочувствия</summary><ReadinessCheck submitLabel="Обновить самочувствие" onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} /></details></details>
+      <TrainingDisclosure className="training-extras workout-options" title="Автоотдых и самочувствие" description={`${autoRest ? 'Автоотдых включён' : 'Автоотдых выключен'} · оценка готовности`}><label className="training-toggle"><input type="checkbox" checked={autoRest} onChange={(event) => { setAutoRest(event.target.checked); localStorage.setItem(`trainlog:auto-rest:${draft.userId}`, String(event.target.checked)) }} />Автоматически запускать отдых после подхода</label><TrainingDisclosure className="training-extras workout-readiness" title="Изменить оценку самочувствия"><ReadinessCheck submitLabel="Обновить самочувствие" onComplete={(readiness) => setDraft((current) => current && ({ ...current, readiness, updatedAt: new Date().toISOString(), syncState: 'pending' }))} /></TrainingDisclosure></TrainingDisclosure>
 
       <Link className="workout-cardio-link" to="/training/cardio"><HeartPulse /><span><strong>Добавить кардио</strong><small>Включить таймер или записать время вручную. Силовая тренировка останется сохранённой.</small></span></Link>
       <Link className="workout-cardio-link" to="/training/exercises"><span><strong>Добавить упражнения</strong><small>Выбрать из общего каталога или добавить своё в текущую тренировку.</small></span></Link>
@@ -466,7 +467,7 @@ export function WorkoutPage() {
 
 
       {finishOpen && (
-        <BottomSheet title="Завершить тренировку" onClose={() => !finishing && setFinishOpen(false)}>
+        <BottomSheet busy={finishing} title="Завершить тренировку" onClose={() => !finishing && setFinishOpen(false)}>
           <div className="finish-summary">
             <CheckCircle2 />
             <p className="eyebrow">Тренировка {template.code}</p>
@@ -486,9 +487,9 @@ export function WorkoutPage() {
             <button className="primary-button wide" type="button" onClick={() => void finish()} disabled={finishing}>
               {finishing ? 'Сохраняем…' : draft.exercises.some((exercise) => !exercise.skipped && exercise.sets.some((set) => !set.isWarmup && !set.done && !set.skipped)) ? 'Сохранить неполную тренировку' : 'Сохранить тренировку'}
             </button>
-            <details className="training-extras finish-comparison"><summary>Упражнения и сравнение с прошлым разом</summary>
+            <TrainingDisclosure className="training-extras finish-comparison" title="Упражнения и сравнение с прошлым разом">
             <WorkoutResult userId={draft.userId} workout={draftToHistory({ ...draft, finishedAt: new Date(now).toISOString() })} history={mergeTrainingHistory(cachedTrainingHistory(draft.userId), getSyncQueue(draft.userId))} />
-            </details>
+            </TrainingDisclosure>
           </div>
         </BottomSheet>
       )}

@@ -1,0 +1,21 @@
+.training-disclosure { min-width: 0; margin: 12px 0; overflow-anchor: none; }
+.training-disclosure .training-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; min-width: 0; min-height: var(--ui-control-height, 48px); gap: 12px; padding: 12px 14px; border: 1px solid #3a3d48; border-radius: var(--ui-control-radius, 14px); background: #191b23; color: #f4f5f8; text-align: left; cursor: pointer; transition: border-color 140ms ease, background-color 140ms ease; }
+.training-disclosure .training-disclosure-copy { display: grid; min-width: 0; gap: 4px; overflow-wrap: anywhere; }
+.training-disclosure .training-disclosure-trigger .training-disclosure-title { font-size: 14px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
+.training-disclosure .training-disclosure-trigger .training-disclosure-copy small { color: #b7becb; font-size: 12px; font-weight: 400; line-height: 1.5; }
+.training-disclosure .training-disclosure-cue { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; color: var(--accent, #ffc857); font-size: 11px; font-weight: 700; }
+.training-disclosure .training-disclosure-cue svg { width: 18px; height: 18px; transition: transform 180ms cubic-bezier(.2,.7,.2,1); }
+.training-disclosure[data-open='true'] > .training-disclosure-trigger { border-color: #9b783c; background: #201d18; }
+.training-disclosure[data-open='true'] > .training-disclosure-trigger .training-disclosure-cue svg { transform: rotate(180deg); }
+.training-disclosure .training-disclosure-region { display: grid; grid-template-rows: 0fr; opacity: 0; pointer-events: none; transition: grid-template-rows 180ms cubic-bezier(.2,.7,.2,1), opacity 140ms ease; }
+.training-disclosure[data-open='true'] > .training-disclosure-region { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
+.training-disclosure .training-disclosure-inner { min-height: 0; overflow: hidden; }
+.training-disclosure .training-disclosure-content { padding: 14px 4px 4px; }
+.training-disclosure .training-disclosure-content > :first-child { margin-top: 0; }
+.training-disclosure .training-disclosure-content > p { font-size: 14px; line-height: 1.6; }
+.training-disclosure .training-disclosure-content > :last-child { margin-bottom: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .training-disclosure .training-disclosure-trigger,
+  .training-disclosure .training-disclosure-cue svg,
+  .training-disclosure .training-disclosure-region { transition: none; }
+}

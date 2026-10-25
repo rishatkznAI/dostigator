@@ -1,0 +1,25 @@
+.cardio-result-photos {
+  min-width: 0;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line, #3a3d48);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.cardio-result-photos h3 { margin: 0 0 8px; font-size: 1rem; }
+.cardio-result-photos .cardio-photo-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; margin: 16px 0; padding: 0; list-style: none; }
+.cardio-photo-item { min-width: 0; padding: 10px; border: 1px solid var(--line, #3a3d48); border-radius: 14px; background: #171820; }
+.cardio-photo-item[data-state='delete'] { grid-column: 1 / -1; }
+.cardio-photo-thumbnail { display: grid; justify-items: center; align-content: center; gap: 8px; width: 100%; min-width: 0; min-height: 100px; padding: 0; border: 0; border-radius: 9px; background: #22242e; color: var(--text-primary, #fff); cursor: pointer; overflow: hidden; }
+.cardio-photo-thumbnail img { display: block; width: 100%; height: 130px; object-fit: cover; }
+.cardio-photo-thumbnail > svg { margin-top: 18px; width: 28px; height: 28px; }
+.cardio-photo-thumbnail > span { padding: 0 8px 8px; font-size: .875rem; line-height: 1.5; }
+.cardio-result-photos .cardio-photo-status { margin: 8px 0; color: var(--muted, #a7a9b3); font-size: .75rem; line-height: 1.5; }
+.cardio-photo-item[data-state='upload'] .cardio-photo-status,
+.cardio-photo-item[data-state='delete'] .cardio-photo-status { color: var(--accent, #ffc857); }
+.cardio-photo-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr)); gap: 8px; }
+.cardio-photo-actions .training-secondary { min-width: 0; margin-top: 0; flex-wrap: wrap; }
+.cardio-photo-delete,
+.cardio-photo-retry { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; white-space: normal; }
+.cardio-photo-full { display: block; width: 100%; max-height: 70dvh; object-fit: contain; border-radius: 12px; }
